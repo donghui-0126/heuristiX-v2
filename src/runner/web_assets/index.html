@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>heuristiX — job shop Gantt</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    background: #0d1117; color: #e6edf3; height: 100vh; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  header {
+    padding: 8px 14px; background: #161b22; border-bottom: 1px solid #30363d;
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap; flex-shrink: 0;
+  }
+  header .title { font-weight: 700; color: #58a6ff; font-size: 16px; }
+  .pill {
+    padding: 2px 8px; border-radius: 6px; background: #21262d;
+    border: 1px solid #30363d; font-size: 12px;
+  }
+  .pill b { color: #f0f6fc; }
+  button {
+    background: #21262d; color: #e6edf3; border: 1px solid #30363d;
+    padding: 5px 10px; border-radius: 6px; font-family: inherit; cursor: pointer;
+    font-size: 12px;
+  }
+  button:hover { background: #30363d; }
+  button.active { background: #1f6feb; border-color: #1f6feb; }
+  input[type=range] { vertical-align: middle; }
+  main {
+    flex: 1; display: grid; grid-template-columns: 1fr 280px;
+    gap: 8px; padding: 8px; overflow: hidden; min-height: 0;
+  }
+  #stage {
+    background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+    width: 100%; height: 100%; display: block;
+  }
+  .panel {
+    background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+    padding: 10px; font-size: 12px; overflow-y: auto;
+  }
+  .panel h3 { margin: 0 0 6px 0; font-size: 12px; color: #58a6ff; letter-spacing: 0.5px; }
+  .row { display: flex; justify-content: space-between; padding: 2px 0; }
+  .row b { color: #f0f6fc; }
+  .legend-box {
+    display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+    margin-right: 6px; vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+<header>
+  <span class="title">heuristiX · Job Shop</span>
+  <span class="pill">rule <b id="ruleName">—</b></span>
+  <span class="pill">scenario <b id="scenarioName">—</b></span>
+  <span class="pill" id="stateBadge">[CONNECTING]</span>
+  <span class="pill">t <b id="simTime">0.0</b> min</span>
+  <span style="flex:1"></span>
+  <button id="pauseBtn">⏸ pause</button>
+  <button id="restartBtn">↻ restart</button>
+  <button id="followBtn" class="active">▷ follow</button>
+  <label class="pill">zoom <input id="zoomSlider" type="range" min="-15" max="15" value="0" step="1" style="width: 120px"></label>
+  <label class="pill">speed <b id="speedLabel">1.0×</b> <input id="speedSlider" type="range" min="-20" max="20" value="0" step="1" style="width: 120px"></label>
+</header>
+
+<main>
+  <canvas id="stage"></canvas>
+  <div class="panel">
+    <h3>METRICS (LIVE)</h3>
+    <div class="row"><span>completed</span><b id="mDone">0/0</b></div>
+    <div class="row"><span>makespan</span><b id="mMakespan">0.0</b></div>
+    <div class="row"><span>mean tardy</span><b id="mTardy">0.0</b></div>
+    <div class="row"><span>tardy rate</span><b id="mTardyRate">0.0%</b></div>
+    <div class="row"><span>urgent tardy</span><b id="mUrgentRate">0.0%</b></div>
+    <div class="row"><span>idle (total)</span><b id="mIdle">0.0</b></div>
+    <div class="row"><span>utilization</span><b id="mUtil">0.0%</b></div>
+
+    <h3 style="margin-top: 14px">JOBS</h3>
+    <div id="jobsList"></div>
+
+    <h3 style="margin-top: 14px">LEGEND</h3>
+    <div><span class="legend-box" style="background:#3fb950"></span>completed</div>
+    <div><span class="legend-box" style="background:#1f6feb;outline:2px dashed #1f6feb;outline-offset:1px"></span>running</div>
+    <div><span class="legend-box" style="background:#21262d;border:1px solid #30363d"></span>idle</div>
+    <div><span class="legend-box" style="background:repeating-linear-gradient(45deg,#444,#444 3px,#222 3px,#222 6px)"></span>breakdown</div>
+    <div style="margin-top: 4px; color: #d29922">▼ disruption</div>
+    <div style="color: #f85149">┃ due-date</div>
+  </div>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const stage = $("stage"), ctx = stage.getContext("2d");
+
+  function fitCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const r = stage.getBoundingClientRect();
+    stage.width = r.width * dpr; stage.height = r.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  fitCanvas();
+  window.addEventListener("resize", fitCanvas);
+
+  let snap = null;
+  let paused = false;
+  let follow = true;
+  let viewportStart = 0;     // sim-min of left edge of canvas
+  let pxPerMinute = 4;       // initial scale
+  let dragStart = null;
+
+  // -------- SSE --------
+  const es = new EventSource("/stream");
+  es.addEventListener("snap", (ev) => { snap = JSON.parse(ev.data); updatePanel(snap); });
+  es.addEventListener("done", (ev) => { snap = JSON.parse(ev.data); updatePanel(snap); });
+  es.onerror = () => setBadge("[DISCONNECTED]", "#4d1f1f", "#f85149");
+  function setBadge(text, bg, fg) {
+    const b = $("stateBadge"); b.textContent = text;
+    b.style.background = bg; b.style.color = fg;
+  }
+
+  // -------- controls --------
+  $("pauseBtn").onclick = async () => {
+    paused = !paused;
+    $("pauseBtn").textContent = paused ? "▶ resume" : "⏸ pause";
+    await fetch("/control", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ paused })});
+  };
+  $("restartBtn").onclick = async () => {
+    await fetch("/restart", {method:"POST"});
+    paused = false; $("pauseBtn").textContent = "⏸ pause";
+    viewportStart = 0;
+  };
+  $("followBtn").onclick = () => {
+    follow = !follow;
+    $("followBtn").classList.toggle("active", follow);
+  };
+  $("zoomSlider").oninput = (e) => {
+    pxPerMinute = Math.pow(1.4, parseInt(e.target.value)) * 4;
+  };
+  $("speedSlider").oninput = async (e) => {
+    const n = parseInt(e.target.value);
+    const mul = Math.pow(1.5, n / 3);
+    $("speedLabel").textContent = mul.toFixed(2) + "×";
+    await fetch("/control", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ speed_mul: mul })});
+  };
+
+  // -------- canvas drag scroll --------
+  stage.addEventListener("mousedown", (e) => {
+    dragStart = { x: e.clientX, vs: viewportStart };
+    follow = false; $("followBtn").classList.remove("active");
+  });
+  window.addEventListener("mousemove", (e) => {
+    if (!dragStart) return;
+    const dx = e.clientX - dragStart.x;
+    viewportStart = Math.max(0, dragStart.vs - dx / pxPerMinute);
+  });
+  window.addEventListener("mouseup", () => { dragStart = null; });
+  stage.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    if (e.shiftKey || e.ctrlKey) {
+      // zoom around mouse
+      const oldPx = pxPerMinute;
+      const factor = Math.exp(-e.deltaY * 0.001);
+      pxPerMinute = Math.max(0.05, Math.min(500, pxPerMinute * factor));
+      // adjust slider to reflect (best effort)
+    } else {
+      viewportStart = Math.max(0, viewportStart + e.deltaY / pxPerMinute);
+      follow = false; $("followBtn").classList.remove("active");
+    }
+  }, { passive: false });
+
+  // -------- sidepanel update --------
+  function updatePanel(s) {
+    $("ruleName").textContent     = s.engine.rule_name;
+    $("scenarioName").textContent = s.scenario;
+    $("simTime").textContent      = s.engine.now.toFixed(1);
+    if (s.finished) setBadge(`[DONE — run #${s.run_id}]`, "#1f3a4d", "#79c0ff");
+    else if (s.paused) setBadge(`[PAUSED — run #${s.run_id}]`, "#4d1f1f", "#f85149");
+    else setBadge(`[RUNNING — run #${s.run_id}]`, "#1a3d1a", "#3fb950");
+
+    const m = s.metrics;
+    $("mDone").textContent       = `${m.n_completed_jobs}/${m.n_jobs}`;
+    $("mMakespan").textContent   = m.makespan.toFixed(1);
+    $("mTardy").textContent      = m.mean_tardiness.toFixed(1);
+    $("mTardyRate").textContent  = `${(m.tardy_rate*100).toFixed(0)}%`;
+    $("mUrgentRate").textContent = `${(m.urgent_tardy_rate*100).toFixed(0)}%`;
+    $("mIdle").textContent       = m.total_machine_idle.toFixed(1);
+    $("mUtil").textContent       = `${(m.mean_machine_utilization*100).toFixed(0)}%`;
+
+    // jobs list
+    const host = $("jobsList"); host.innerHTML = "";
+    for (const j of s.engine.jobs) {
+      const row = document.createElement("div");
+      row.className = "row";
+      const left = document.createElement("span");
+      left.innerHTML = `<span class="legend-box" style="background:${jobColor(j.id)}"></span>J${j.id}${j.urgent?" 🔥":""}`;
+      const right = document.createElement("b");
+      right.textContent = j.done ? "✓" : `due ${j.due.toFixed(0)}`;
+      right.style.color = j.done ? "#3fb950" : (s.engine.now > j.due ? "#f85149" : "#7d8590");
+      row.appendChild(left); row.appendChild(right);
+      host.appendChild(row);
+    }
+  }
+
+  // -------- color per job (HSL hash) --------
+  function jobColor(id) {
+    const h = (id * 47) % 360;
+    return `hsl(${h}, 65%, 55%)`;
+  }
+
+  // -------- canvas Gantt --------
+  function draw() {
+    if (!snap) {
+      ctx.fillStyle = "#7d8590"; ctx.font = "14px ui-monospace";
+      ctx.fillText("waiting for first frame…", 20, 40);
+      requestAnimationFrame(draw); return;
+    }
+    const W = stage.clientWidth, H = stage.clientHeight;
+    ctx.clearRect(0, 0, W, H);
+
+    const e = snap.engine;
+    const headerH = 28;
+    const machH = Math.max(22, Math.floor((H - headerH - 20) / Math.max(1, e.n_machines)));
+    const stageH = headerH + machH * e.n_machines;
+
+    // Auto-follow: keep "now" near right edge (with 30% lookahead).
+    const visibleMinutes = W / pxPerMinute;
+    if (follow) {
+      viewportStart = Math.max(0, e.now - visibleMinutes * 0.7);
+    }
+    const t0 = viewportStart;
+    const t1 = t0 + visibleMinutes;
+
+    // -------- time axis (ticks) --------
+    ctx.fillStyle = "#161b22"; ctx.fillRect(0, 0, W, headerH);
+    ctx.strokeStyle = "#30363d"; ctx.beginPath();
+    ctx.moveTo(0, headerH); ctx.lineTo(W, headerH); ctx.stroke();
+    const tickStep = pickTickStep(visibleMinutes);
+    ctx.fillStyle = "#7d8590"; ctx.font = "11px ui-monospace"; ctx.textAlign = "left";
+    for (let t = Math.ceil(t0 / tickStep) * tickStep; t < t1; t += tickStep) {
+      const x = (t - t0) * pxPerMinute;
+      ctx.strokeStyle = "#21262d"; ctx.beginPath();
+      ctx.moveTo(x, headerH); ctx.lineTo(x, stageH); ctx.stroke();
+      ctx.fillText(`${t.toFixed(0)}`, x + 3, 16);
+    }
+
+    // -------- machine lanes --------
+    ctx.font = "11px ui-monospace";
+    for (let i = 0; i < e.n_machines; i++) {
+      const y = headerH + i * machH;
+      ctx.fillStyle = i % 2 === 0 ? "#0d1117" : "#0f141a";
+      ctx.fillRect(0, y, W, machH);
+      ctx.fillStyle = "#7d8590";
+      ctx.fillText(`M${i}`, 4, y + 14);
+    }
+
+    // -------- "now" line --------
+    const xNow = (e.now - t0) * pxPerMinute;
+    if (xNow >= 0 && xNow <= W) {
+      ctx.strokeStyle = "#58a6ff"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(xNow, headerH); ctx.lineTo(xNow, stageH); ctx.stroke();
+      ctx.lineWidth = 1;
+    }
+
+    // -------- ops --------
+    for (const op of e.ops) {
+      if (op.start == null) {
+        // not started — for ops with future part_available_time draw a light placeholder
+        if (op.part_available_time > e.now) {
+          drawPlaceholder(op, t0, headerH, machH);
+        }
+        continue;
+      }
+      const start = op.start;
+      const end = (op.end != null) ? op.end : (start + op.processing_time);
+      const isRunning = (op.end == null);
+      drawOpBox(op, start, end, isRunning, t0, headerH, machH);
+    }
+
+    // -------- due-date markers per job (small ┃ at due_date on top of header) --------
+    for (const j of e.jobs) {
+      const x = (j.due - t0) * pxPerMinute;
+      if (x < 0 || x > W) continue;
+      ctx.strokeStyle = j.urgent ? "#f85149" : "#5d4316";
+      ctx.lineWidth = j.urgent ? 2 : 1;
+      ctx.beginPath();
+      ctx.moveTo(x, 0); ctx.lineTo(x, headerH); ctx.stroke();
+      ctx.lineWidth = 1;
+    }
+
+    // -------- corner overlay --------
+    ctx.fillStyle = "#161b22aa"; ctx.fillRect(W - 130, stageH + 2, 128, 16);
+    ctx.fillStyle = "#7d8590"; ctx.textAlign = "right";
+    ctx.fillText(`${pxPerMinute.toFixed(1)} px/min · ${snap.speed_mul.toFixed(2)}× sim`, W - 6, stageH + 14);
+    ctx.textAlign = "left";
+
+    requestAnimationFrame(draw);
+  }
+
+  function drawOpBox(op, start, end, isRunning, t0, headerH, machH) {
+    const x = (start - t0) * pxPerMinute;
+    const w = Math.max(2, (end - start) * pxPerMinute);
+    const y = headerH + op.machine * machH + 2;
+    const h = machH - 4;
+
+    ctx.fillStyle = jobColor(op.job);
+    ctx.globalAlpha = isRunning ? 0.85 : 1.0;
+    ctx.fillRect(x, y, w, h);
+    ctx.globalAlpha = 1.0;
+
+    if (isRunning) {
+      // dashed right edge to show "in progress"
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = "#ffffff";
+      ctx.beginPath(); ctx.moveTo(x + w, y); ctx.lineTo(x + w, y + h); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // label, only if box is wide enough
+    if (w > 28 && h > 12) {
+      ctx.fillStyle = "#0d1117";
+      ctx.font = "11px ui-monospace";
+      ctx.fillText(`J${op.job}.${op.op}`, x + 4, y + h / 2 + 4);
+    }
+  }
+
+  function drawPlaceholder(op, t0, headerH, machH) {
+    const x = (op.part_available_time - t0) * pxPerMinute;
+    const w = Math.max(2, op.processing_time * pxPerMinute);
+    const y = headerH + op.machine * machH + 4;
+    const h = machH - 8;
+    if (x + w < 0 || x > stage.clientWidth) return;
+    ctx.strokeStyle = jobColor(op.job);
+    ctx.setLineDash([4, 3]);
+    ctx.strokeRect(x, y, w, h);
+    ctx.setLineDash([]);
+    // marker ▼ at part_available_time on header
+    if (x >= 0 && x <= stage.clientWidth) {
+      ctx.fillStyle = "#d29922";
+      ctx.beginPath();
+      ctx.moveTo(x - 4, headerH - 8); ctx.lineTo(x + 4, headerH - 8); ctx.lineTo(x, headerH);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  function pickTickStep(visibleMinutes) {
+    const targetTicks = 10;
+    const raw = visibleMinutes / targetTicks;
+    const candidates = [1, 2, 5, 10, 20, 30, 60, 120, 300, 600, 1200, 3600];
+    for (const c of candidates) if (raw <= c) return c;
+    return 7200;
+  }
+
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

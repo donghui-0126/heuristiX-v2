@@ -1,0 +1,36 @@
+# Secrets — never commit
+.env
+.env.local
+*.pem
+*.key
+
+# Rust build
+/target
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.python-version
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Run artefacts
+/runs
+
+# Per-user platform state (research workspace)
+hub/workspace/*/
+!hub/workspace/.gitkeep
+
+# Proprietary research docs (kept locally only)
+*.docx
+
+# Generated PDFs
+*.pdf
+!docs/*.pdf
+
