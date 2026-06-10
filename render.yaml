@@ -1,12 +1,15 @@
 services:
   - type: web
-    name: fjssp-workbench
+    name: heuristix                    # → https://heuristix.onrender.com (이름 선점 시 heuristix-lab 등으로)
     env: python
     plan: free
-    buildCommand: "git clone https://github.com/SchedulingLab/fjsp-instances.git fjsp-instances && pip install -r requirements.txt"
+    rootDir: dashboard
+    buildCommand: "pip install -r requirements.txt && python3 seed.py"
     startCommand: gunicorn app:app --workers 1 --threads 4 --timeout 120 --bind 0.0.0.0:$PORT
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.0
+        value: 3.12.0
       - key: OPENAI_API_KEY
-        sync: false
+        sync: false                    # Render 대시보드에서 직접 입력 (커밋 금지)
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
