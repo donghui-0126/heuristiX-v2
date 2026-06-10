@@ -1,0 +1,1906 @@
+{
+  "machines": 6,
+  "jobs": [
+    [
+      [
+        {
+          "machine": 0,
+          "processing": 60.736506452407724
+        },
+        {
+          "machine": 1,
+          "processing": 45.40902736071131
+        },
+        {
+          "machine": 2,
+          "processing": 67.06482091486994
+        },
+        {
+          "machine": 3,
+          "processing": 47.4751602623574
+        },
+        {
+          "machine": 4,
+          "processing": 61.209966295860156
+        },
+        {
+          "machine": 5,
+          "processing": 53.18619506018458
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 62.15997948556951
+        },
+        {
+          "machine": 1,
+          "processing": 62.82729139095371
+        },
+        {
+          "machine": 2,
+          "processing": 52.32967912754371
+        },
+        {
+          "machine": 3,
+          "processing": 65.71840662561665
+        },
+        {
+          "machine": 4,
+          "processing": 60.6281043245168
+        },
+        {
+          "machine": 5,
+          "processing": 45.058543613715926
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 10.58130617801831
+        },
+        {
+          "machine": 1,
+          "processing": 13.822295909296908
+        },
+        {
+          "machine": 2,
+          "processing": 10.989343286023809
+        },
+        {
+          "machine": 3,
+          "processing": 11.65565544806602
+        },
+        {
+          "machine": 4,
+          "processing": 11.411492464820228
+        },
+        {
+          "machine": 5,
+          "processing": 12.214036944758584
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 48.149524491915116
+        },
+        {
+          "machine": 1,
+          "processing": 47.75884431052328
+        },
+        {
+          "machine": 2,
+          "processing": 51.006540686267634
+        },
+        {
+          "machine": 3,
+          "processing": 40.10976073898881
+        },
+        {
+          "machine": 4,
+          "processing": 46.58299545210213
+        },
+        {
+          "machine": 5,
+          "processing": 46.328670468650905
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 49.545749790640436
+        },
+        {
+          "machine": 1,
+          "processing": 59.30603083083915
+        },
+        {
+          "machine": 2,
+          "processing": 65.84715901224563
+        },
+        {
+          "machine": 3,
+          "processing": 71.72621062002158
+        },
+        {
+          "machine": 4,
+          "processing": 59.414905337998206
+        },
+        {
+          "machine": 5,
+          "processing": 61.783106856323016
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 60.22361040280542
+        },
+        {
+          "machine": 1,
+          "processing": 65.19476411766439
+        },
+        {
+          "machine": 2,
+          "processing": 65.28449529828639
+        },
+        {
+          "machine": 3,
+          "processing": 66.22110972052168
+        },
+        {
+          "machine": 4,
+          "processing": 54.70617235850579
+        },
+        {
+          "machine": 5,
+          "processing": 63.58646077650709
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 0,
+          "processing": 19.412955796705113
+        },
+        {
+          "machine": 1,
+          "processing": 19.51447727634378
+        },
+        {
+          "machine": 2,
+          "processing": 16.44473111848977
+        },
+        {
+          "machine": 3,
+          "processing": 19.645695871563287
+        },
+        {
+          "machine": 4,
+          "processing": 20.45907831049668
+        },
+        {
+          "machine": 5,
+          "processing": 20.016679897210537
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 7.711408801428027
+        },
+        {
+          "machine": 1,
+          "processing": 5.559836382924522
+        },
+        {
+          "machine": 2,
+          "processing": 7.759116924726615
+        },
+        {
+          "machine": 3,
+          "processing": 6.579675372382906
+        },
+        {
+          "machine": 4,
+          "processing": 6.126423333868222
+        },
+        {
+          "machine": 5,
+          "processing": 7.8887373315188105
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 53.80195338559522
+        },
+        {
+          "machine": 1,
+          "processing": 76.41222521644981
+        },
+        {
+          "machine": 2,
+          "processing": 72.80636513682825
+        },
+        {
+          "machine": 3,
+          "processing": 71.20653714311823
+        },
+        {
+          "machine": 4,
+          "processing": 57.91364542936114
+        },
+        {
+          "machine": 5,
+          "processing": 63.310624745089974
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 50.79488982071749
+        },
+        {
+          "machine": 1,
+          "processing": 61.8209720956449
+        },
+        {
+          "machine": 2,
+          "processing": 54.97677896363058
+        },
+        {
+          "machine": 3,
+          "processing": 60.45939751077122
+        },
+        {
+          "machine": 4,
+          "processing": 63.821353692251776
+        },
+        {
+          "machine": 5,
+          "processing": 54.306320512057596
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 42.58025216811103
+        },
+        {
+          "machine": 1,
+          "processing": 37.01299075490527
+        },
+        {
+          "machine": 2,
+          "processing": 44.63476883833107
+        },
+        {
+          "machine": 3,
+          "processing": 38.23897935926875
+        },
+        {
+          "machine": 4,
+          "processing": 45.59584045364764
+        },
+        {
+          "machine": 5,
+          "processing": 43.03676021110168
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 5.748258585115418
+        },
+        {
+          "machine": 1,
+          "processing": 7.511150829551007
+        },
+        {
+          "machine": 2,
+          "processing": 8.119629132836451
+        },
+        {
+          "machine": 3,
+          "processing": 5.846733142822475
+        },
+        {
+          "machine": 4,
+          "processing": 7.262351136325468
+        },
+        {
+          "machine": 5,
+          "processing": 7.8165028636434055
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 0,
+          "processing": 75.86407489075586
+        },
+        {
+          "machine": 1,
+          "processing": 57.6976648355757
+        },
+        {
+          "machine": 2,
+          "processing": 74.6970997081222
+        },
+        {
+          "machine": 3,
+          "processing": 77.6341927373745
+        },
+        {
+          "machine": 4,
+          "processing": 72.51473686876142
+        },
+        {
+          "machine": 5,
+          "processing": 66.49189212254925
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 79.15685655262412
+        },
+        {
+          "machine": 1,
+          "processing": 64.54282924473992
+        },
+        {
+          "machine": 2,
+          "processing": 68.21357684108135
+        },
+        {
+          "machine": 3,
+          "processing": 75.33419024591693
+        },
+        {
+          "machine": 4,
+          "processing": 61.79757623499416
+        },
+        {
+          "machine": 5,
+          "processing": 65.3795568960791
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 83.50464885956747
+        },
+        {
+          "machine": 1,
+          "processing": 80.6985573086258
+        },
+        {
+          "machine": 2,
+          "processing": 111.00656272198867
+        },
+        {
+          "machine": 3,
+          "processing": 84.24715221157494
+        },
+        {
+          "machine": 4,
+          "processing": 102.17118694155918
+        },
+        {
+          "machine": 5,
+          "processing": 98.16994700704382
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 46.47153470859222
+        },
+        {
+          "machine": 1,
+          "processing": 42.40384304174806
+        },
+        {
+          "machine": 2,
+          "processing": 49.38737130462316
+        },
+        {
+          "machine": 3,
+          "processing": 49.14466258102826
+        },
+        {
+          "machine": 4,
+          "processing": 41.29207633468275
+        },
+        {
+          "machine": 5,
+          "processing": 47.29767177142949
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 75.58702458829609
+        },
+        {
+          "machine": 1,
+          "processing": 66.2935311865044
+        },
+        {
+          "machine": 2,
+          "processing": 73.36614172530325
+        },
+        {
+          "machine": 3,
+          "processing": 81.90097566835185
+        },
+        {
+          "machine": 4,
+          "processing": 60.80593191631756
+        },
+        {
+          "machine": 5,
+          "processing": 76.17189942227482
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 32.23622610145083
+        },
+        {
+          "machine": 1,
+          "processing": 38.5835498790914
+        },
+        {
+          "machine": 2,
+          "processing": 45.17157424362751
+        },
+        {
+          "machine": 3,
+          "processing": 34.7844242752674
+        },
+        {
+          "machine": 4,
+          "processing": 34.70974699271047
+        },
+        {
+          "machine": 5,
+          "processing": 43.846146917535684
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 0,
+          "processing": 80.75814922191293
+        },
+        {
+          "machine": 1,
+          "processing": 102.76437106293537
+        },
+        {
+          "machine": 2,
+          "processing": 91.34681838663121
+        },
+        {
+          "machine": 3,
+          "processing": 92.8058685405831
+        },
+        {
+          "machine": 4,
+          "processing": 89.43970513994172
+        },
+        {
+          "machine": 5,
+          "processing": 115.13503171310774
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 77.2773714269319
+        },
+        {
+          "machine": 1,
+          "processing": 80.89950784400092
+        },
+        {
+          "machine": 2,
+          "processing": 82.04248981835575
+        },
+        {
+          "machine": 3,
+          "processing": 81.28261137868711
+        },
+        {
+          "machine": 4,
+          "processing": 73.9503684923528
+        },
+        {
+          "machine": 5,
+          "processing": 64.75551451168053
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 17.112712555680496
+        },
+        {
+          "machine": 1,
+          "processing": 14.493046170764666
+        },
+        {
+          "machine": 2,
+          "processing": 14.83649364757835
+        },
+        {
+          "machine": 3,
+          "processing": 18.96323765235492
+        },
+        {
+          "machine": 4,
+          "processing": 17.445495094280965
+        },
+        {
+          "machine": 5,
+          "processing": 19.316737025672726
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 25.21880403907734
+        },
+        {
+          "machine": 1,
+          "processing": 23.718887397118372
+        },
+        {
+          "machine": 2,
+          "processing": 25.40447641852995
+        },
+        {
+          "machine": 3,
+          "processing": 26.716430975017932
+        },
+        {
+          "machine": 4,
+          "processing": 26.360128695222322
+        },
+        {
+          "machine": 5,
+          "processing": 23.1915609695022
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 71.35069558283831
+        },
+        {
+          "machine": 1,
+          "processing": 68.8278067119265
+        },
+        {
+          "machine": 2,
+          "processing": 73.28661985562033
+        },
+        {
+          "machine": 3,
+          "processing": 82.71564672266796
+        },
+        {
+          "machine": 4,
+          "processing": 62.43806814941573
+        },
+        {
+          "machine": 5,
+          "processing": 76.61121562243463
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 20.90619551239356
+        },
+        {
+          "machine": 1,
+          "processing": 15.263494508540392
+        },
+        {
+          "machine": 2,
+          "processing": 18.17006704556365
+        },
+        {
+          "machine": 3,
+          "processing": 18.853615490174967
+        },
+        {
+          "machine": 4,
+          "processing": 14.648631240291879
+        },
+        {
+          "machine": 5,
+          "processing": 18.93254687420426
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 0,
+          "processing": 78.40384588194696
+        },
+        {
+          "machine": 1,
+          "processing": 81.82261106716255
+        },
+        {
+          "machine": 2,
+          "processing": 89.86345081571159
+        },
+        {
+          "machine": 3,
+          "processing": 83.7477577716881
+        },
+        {
+          "machine": 4,
+          "processing": 88.55616117297465
+        },
+        {
+          "machine": 5,
+          "processing": 87.27070950827168
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 30.057238029758558
+        },
+        {
+          "machine": 1,
+          "processing": 31.11636533908287
+        },
+        {
+          "machine": 2,
+          "processing": 32.337042135601244
+        },
+        {
+          "machine": 3,
+          "processing": 33.852822566425395
+        },
+        {
+          "machine": 4,
+          "processing": 32.26323174777874
+        },
+        {
+          "machine": 5,
+          "processing": 34.2529595692711
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 54.41165417897646
+        },
+        {
+          "machine": 1,
+          "processing": 57.3009588270108
+        },
+        {
+          "machine": 2,
+          "processing": 66.65404730086905
+        },
+        {
+          "machine": 3,
+          "processing": 52.920443386852476
+        },
+        {
+          "machine": 4,
+          "processing": 58.87966782320949
+        },
+        {
+          "machine": 5,
+          "processing": 48.95260402659693
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 78.61904948167475
+        },
+        {
+          "machine": 1,
+          "processing": 68.78713593793785
+        },
+        {
+          "machine": 2,
+          "processing": 63.44463811100772
+        },
+        {
+          "machine": 3,
+          "processing": 73.0215390119688
+        },
+        {
+          "machine": 4,
+          "processing": 63.139894304545315
+        },
+        {
+          "machine": 5,
+          "processing": 81.72777509665232
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 13.40107758986587
+        },
+        {
+          "machine": 1,
+          "processing": 16.023272624721073
+        },
+        {
+          "machine": 2,
+          "processing": 19.860062097732126
+        },
+        {
+          "machine": 3,
+          "processing": 17.118447837574447
+        },
+        {
+          "machine": 4,
+          "processing": 14.261161135555753
+        },
+        {
+          "machine": 5,
+          "processing": 15.89344066507814
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 2.769207320323376
+        },
+        {
+          "machine": 1,
+          "processing": 2.588032749396308
+        },
+        {
+          "machine": 2,
+          "processing": 2.311466723669003
+        },
+        {
+          "machine": 3,
+          "processing": 2.7352540986749436
+        },
+        {
+          "machine": 4,
+          "processing": 3.109785866885662
+        },
+        {
+          "machine": 5,
+          "processing": 2.3200432595374236
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 0,
+          "processing": 16.4103976560622
+        },
+        {
+          "machine": 1,
+          "processing": 20.216053084890646
+        },
+        {
+          "machine": 2,
+          "processing": 14.485977602594645
+        },
+        {
+          "machine": 3,
+          "processing": 16.55630849490716
+        },
+        {
+          "machine": 4,
+          "processing": 19.228009077333304
+        },
+        {
+          "machine": 5,
+          "processing": 16.63339303796411
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 41.31050401623054
+        },
+        {
+          "machine": 1,
+          "processing": 41.97097111142024
+        },
+        {
+          "machine": 2,
+          "processing": 39.65061526877218
+        },
+        {
+          "machine": 3,
+          "processing": 45.908636253840506
+        },
+        {
+          "machine": 4,
+          "processing": 37.449551821296936
+        },
+        {
+          "machine": 5,
+          "processing": 34.50492517688736
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 15.672245648876984
+        },
+        {
+          "machine": 1,
+          "processing": 13.491378001882481
+        },
+        {
+          "machine": 2,
+          "processing": 15.615653128927814
+        },
+        {
+          "machine": 3,
+          "processing": 12.909150793215009
+        },
+        {
+          "machine": 4,
+          "processing": 12.00398813183021
+        },
+        {
+          "machine": 5,
+          "processing": 15.941803789584284
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 41.94492116892606
+        },
+        {
+          "machine": 1,
+          "processing": 38.73485255916774
+        },
+        {
+          "machine": 2,
+          "processing": 38.06288330046243
+        },
+        {
+          "machine": 3,
+          "processing": 42.83858294747574
+        },
+        {
+          "machine": 4,
+          "processing": 33.65479921106089
+        },
+        {
+          "machine": 5,
+          "processing": 41.96920402792134
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 94.42956363879664
+        },
+        {
+          "machine": 1,
+          "processing": 85.93445157485421
+        },
+        {
+          "machine": 2,
+          "processing": 105.68120326138435
+        },
+        {
+          "machine": 3,
+          "processing": 96.87460061579715
+        },
+        {
+          "machine": 4,
+          "processing": 106.78319025853399
+        },
+        {
+          "machine": 5,
+          "processing": 99.28619743184836
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 79.29057424781529
+        },
+        {
+          "machine": 1,
+          "processing": 88.58030867553244
+        },
+        {
+          "machine": 2,
+          "processing": 86.96391489602844
+        },
+        {
+          "machine": 3,
+          "processing": 102.29255821455433
+        },
+        {
+          "machine": 4,
+          "processing": 98.31652598729232
+        },
+        {
+          "machine": 5,
+          "processing": 78.55985455695918
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 0,
+          "processing": 40.19333471547911
+        },
+        {
+          "machine": 1,
+          "processing": 46.946848388790144
+        },
+        {
+          "machine": 2,
+          "processing": 46.740754289831536
+        },
+        {
+          "machine": 3,
+          "processing": 47.494406228079356
+        },
+        {
+          "machine": 4,
+          "processing": 51.00087391049526
+        },
+        {
+          "machine": 5,
+          "processing": 39.391719502391744
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 3.462555000322672
+        },
+        {
+          "machine": 1,
+          "processing": 3.6114011879238066
+        },
+        {
+          "machine": 2,
+          "processing": 3.584776479273667
+        },
+        {
+          "machine": 3,
+          "processing": 3.448012980595614
+        },
+        {
+          "machine": 4,
+          "processing": 3.8549674838009964
+        },
+        {
+          "machine": 5,
+          "processing": 3.758024071126749
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 80.27701144010128
+        },
+        {
+          "machine": 1,
+          "processing": 79.86775866426228
+        },
+        {
+          "machine": 2,
+          "processing": 83.3847215262032
+        },
+        {
+          "machine": 3,
+          "processing": 67.96008180214272
+        },
+        {
+          "machine": 4,
+          "processing": 70.80810745575064
+        },
+        {
+          "machine": 5,
+          "processing": 76.29074843234564
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 35.81304990657324
+        },
+        {
+          "machine": 1,
+          "processing": 35.708546852401454
+        },
+        {
+          "machine": 2,
+          "processing": 32.870627974957834
+        },
+        {
+          "machine": 3,
+          "processing": 41.01378514211548
+        },
+        {
+          "machine": 4,
+          "processing": 37.74371334760758
+        },
+        {
+          "machine": 5,
+          "processing": 30.371401008769578
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 8.404424945734474
+        },
+        {
+          "machine": 1,
+          "processing": 8.89569198269477
+        },
+        {
+          "machine": 2,
+          "processing": 8.081851271420941
+        },
+        {
+          "machine": 3,
+          "processing": 9.423833617173617
+        },
+        {
+          "machine": 4,
+          "processing": 8.662965858683972
+        },
+        {
+          "machine": 5,
+          "processing": 9.47614433029633
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 52.162628792165634
+        },
+        {
+          "machine": 1,
+          "processing": 61.821652476762715
+        },
+        {
+          "machine": 2,
+          "processing": 46.5457678757472
+        },
+        {
+          "machine": 3,
+          "processing": 63.86760501600075
+        },
+        {
+          "machine": 4,
+          "processing": 62.05083038127331
+        },
+        {
+          "machine": 5,
+          "processing": 49.19775282303884
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 0,
+          "processing": 74.00656118936847
+        },
+        {
+          "machine": 1,
+          "processing": 96.82704692706366
+        },
+        {
+          "machine": 2,
+          "processing": 68.38904531111727
+        },
+        {
+          "machine": 3,
+          "processing": 99.80932442711992
+        },
+        {
+          "machine": 4,
+          "processing": 90.31270193063192
+        },
+        {
+          "machine": 5,
+          "processing": 78.72326647270118
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 63.09092480006122
+        },
+        {
+          "machine": 1,
+          "processing": 45.789927183365236
+        },
+        {
+          "machine": 2,
+          "processing": 60.288574689993254
+        },
+        {
+          "machine": 3,
+          "processing": 56.578659585114615
+        },
+        {
+          "machine": 4,
+          "processing": 61.525688130470975
+        },
+        {
+          "machine": 5,
+          "processing": 51.306064525371276
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 57.34089561031386
+        },
+        {
+          "machine": 1,
+          "processing": 69.71577937960465
+        },
+        {
+          "machine": 2,
+          "processing": 74.53387347896944
+        },
+        {
+          "machine": 3,
+          "processing": 73.41802466589564
+        },
+        {
+          "machine": 4,
+          "processing": 58.09399050138554
+        },
+        {
+          "machine": 5,
+          "processing": 58.026452571295295
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 75.27719047309608
+        },
+        {
+          "machine": 1,
+          "processing": 91.68418876760981
+        },
+        {
+          "machine": 2,
+          "processing": 80.22864414263172
+        },
+        {
+          "machine": 3,
+          "processing": 70.43982308827108
+        },
+        {
+          "machine": 4,
+          "processing": 88.79838536870889
+        },
+        {
+          "machine": 5,
+          "processing": 86.62333887069934
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 37.46922614687967
+        },
+        {
+          "machine": 1,
+          "processing": 39.816325742610104
+        },
+        {
+          "machine": 2,
+          "processing": 36.840077878678734
+        },
+        {
+          "machine": 3,
+          "processing": 38.40441666063103
+        },
+        {
+          "machine": 4,
+          "processing": 33.96576121609116
+        },
+        {
+          "machine": 5,
+          "processing": 34.087918245802
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 32.60745259323719
+        },
+        {
+          "machine": 1,
+          "processing": 31.42441131305899
+        },
+        {
+          "machine": 2,
+          "processing": 24.44104661691284
+        },
+        {
+          "machine": 3,
+          "processing": 22.800538569391538
+        },
+        {
+          "machine": 4,
+          "processing": 31.423918774090833
+        },
+        {
+          "machine": 5,
+          "processing": 25.39658826607012
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 0,
+          "processing": 56.00631774225534
+        },
+        {
+          "machine": 1,
+          "processing": 61.94653977564404
+        },
+        {
+          "machine": 2,
+          "processing": 62.00582187149972
+        },
+        {
+          "machine": 3,
+          "processing": 57.70082156441095
+        },
+        {
+          "machine": 4,
+          "processing": 61.3624290116552
+        },
+        {
+          "machine": 5,
+          "processing": 56.9032849321225
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 51.77103857864353
+        },
+        {
+          "machine": 1,
+          "processing": 47.11038389469937
+        },
+        {
+          "machine": 2,
+          "processing": 46.3732308929038
+        },
+        {
+          "machine": 3,
+          "processing": 51.20406057885799
+        },
+        {
+          "machine": 4,
+          "processing": 42.707553947115045
+        },
+        {
+          "machine": 5,
+          "processing": 49.496401196438086
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 38.87169466282311
+        },
+        {
+          "machine": 1,
+          "processing": 46.89193007250258
+        },
+        {
+          "machine": 2,
+          "processing": 35.086105047272405
+        },
+        {
+          "machine": 3,
+          "processing": 43.32779361197929
+        },
+        {
+          "machine": 4,
+          "processing": 47.27147474652352
+        },
+        {
+          "machine": 5,
+          "processing": 41.66875085290977
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 72.06610251890176
+        },
+        {
+          "machine": 1,
+          "processing": 81.43065058409223
+        },
+        {
+          "machine": 2,
+          "processing": 96.1927483516563
+        },
+        {
+          "machine": 3,
+          "processing": 79.12278406082666
+        },
+        {
+          "machine": 4,
+          "processing": 87.49590908810232
+        },
+        {
+          "machine": 5,
+          "processing": 72.16615191004772
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 37.14098031884767
+        },
+        {
+          "machine": 1,
+          "processing": 35.96587783282319
+        },
+        {
+          "machine": 2,
+          "processing": 33.48331459557836
+        },
+        {
+          "machine": 3,
+          "processing": 29.35194210170981
+        },
+        {
+          "machine": 4,
+          "processing": 28.025288989525006
+        },
+        {
+          "machine": 5,
+          "processing": 35.73888132288899
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 78.14312316224655
+        },
+        {
+          "machine": 1,
+          "processing": 67.53586057426939
+        },
+        {
+          "machine": 2,
+          "processing": 83.02883067396326
+        },
+        {
+          "machine": 3,
+          "processing": 82.6522329123933
+        },
+        {
+          "machine": 4,
+          "processing": 78.72871885615774
+        },
+        {
+          "machine": 5,
+          "processing": 81.15738601233035
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 0,
+          "processing": 50.494674028970095
+        },
+        {
+          "machine": 1,
+          "processing": 41.61646159923599
+        },
+        {
+          "machine": 2,
+          "processing": 47.72711629632512
+        },
+        {
+          "machine": 3,
+          "processing": 41.43494740235765
+        },
+        {
+          "machine": 4,
+          "processing": 36.23786515408342
+        },
+        {
+          "machine": 5,
+          "processing": 48.587211672069195
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 23.182883283873416
+        },
+        {
+          "machine": 1,
+          "processing": 28.747414095979725
+        },
+        {
+          "machine": 2,
+          "processing": 29.046874830499185
+        },
+        {
+          "machine": 3,
+          "processing": 27.341154655100702
+        },
+        {
+          "machine": 4,
+          "processing": 28.478930632386437
+        },
+        {
+          "machine": 5,
+          "processing": 28.480600781768086
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 45.21468171273126
+        },
+        {
+          "machine": 1,
+          "processing": 54.790577080796986
+        },
+        {
+          "machine": 2,
+          "processing": 54.717398367499804
+        },
+        {
+          "machine": 3,
+          "processing": 48.327016787989194
+        },
+        {
+          "machine": 4,
+          "processing": 48.939574831616554
+        },
+        {
+          "machine": 5,
+          "processing": 41.01494403875333
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 28.885897768223437
+        },
+        {
+          "machine": 1,
+          "processing": 27.98973353235359
+        },
+        {
+          "machine": 2,
+          "processing": 29.06501075701728
+        },
+        {
+          "machine": 3,
+          "processing": 25.926788037504764
+        },
+        {
+          "machine": 4,
+          "processing": 26.652167625976425
+        },
+        {
+          "machine": 5,
+          "processing": 27.53114754385412
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 26.779853590502817
+        },
+        {
+          "machine": 1,
+          "processing": 21.6271527724679
+        },
+        {
+          "machine": 2,
+          "processing": 21.936798289255513
+        },
+        {
+          "machine": 3,
+          "processing": 27.729928969365144
+        },
+        {
+          "machine": 4,
+          "processing": 28.628993001997888
+        },
+        {
+          "machine": 5,
+          "processing": 23.001823528269558
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 29.738185044742206
+        },
+        {
+          "machine": 1,
+          "processing": 29.532574203735418
+        },
+        {
+          "machine": 2,
+          "processing": 32.93169230989422
+        },
+        {
+          "machine": 3,
+          "processing": 33.35081464757494
+        },
+        {
+          "machine": 4,
+          "processing": 39.192410277763884
+        },
+        {
+          "machine": 5,
+          "processing": 39.368952827707254
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 0,
+          "processing": 67.71497000651051
+        },
+        {
+          "machine": 1,
+          "processing": 90.22927168984177
+        },
+        {
+          "machine": 2,
+          "processing": 67.96609423948149
+        },
+        {
+          "machine": 3,
+          "processing": 79.43753104612767
+        },
+        {
+          "machine": 4,
+          "processing": 76.0782982487598
+        },
+        {
+          "machine": 5,
+          "processing": 77.65923490040336
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 47.11731443393336
+        },
+        {
+          "machine": 1,
+          "processing": 52.12174733700593
+        },
+        {
+          "machine": 2,
+          "processing": 51.114442724162124
+        },
+        {
+          "machine": 3,
+          "processing": 46.44252820521776
+        },
+        {
+          "machine": 4,
+          "processing": 55.55071415867086
+        },
+        {
+          "machine": 5,
+          "processing": 66.9895015404238
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 51.41956888475548
+        },
+        {
+          "machine": 1,
+          "processing": 62.453110025325294
+        },
+        {
+          "machine": 2,
+          "processing": 59.0709771398753
+        },
+        {
+          "machine": 3,
+          "processing": 48.2991705338309
+        },
+        {
+          "machine": 4,
+          "processing": 45.61909291637155
+        },
+        {
+          "machine": 5,
+          "processing": 52.84482665008403
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 24.1767780229805
+        },
+        {
+          "machine": 1,
+          "processing": 27.920260540927078
+        },
+        {
+          "machine": 2,
+          "processing": 20.72145460031188
+        },
+        {
+          "machine": 3,
+          "processing": 21.339937700244786
+        },
+        {
+          "machine": 4,
+          "processing": 29.042563599929657
+        },
+        {
+          "machine": 5,
+          "processing": 26.337861025217293
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 58.828214982214945
+        },
+        {
+          "machine": 1,
+          "processing": 55.52197735934463
+        },
+        {
+          "machine": 2,
+          "processing": 45.60355695404612
+        },
+        {
+          "machine": 3,
+          "processing": 49.53406151962472
+        },
+        {
+          "machine": 4,
+          "processing": 62.816853333199155
+        },
+        {
+          "machine": 5,
+          "processing": 45.109831584231635
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 66.62387317785307
+        },
+        {
+          "machine": 1,
+          "processing": 75.0455751497825
+        },
+        {
+          "machine": 2,
+          "processing": 60.946262320114556
+        },
+        {
+          "machine": 3,
+          "processing": 81.92019603048654
+        },
+        {
+          "machine": 4,
+          "processing": 69.69140663855933
+        },
+        {
+          "machine": 5,
+          "processing": 65.16909947729391
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 0,
+          "processing": 7.216438481070593
+        },
+        {
+          "machine": 1,
+          "processing": 7.34909876210991
+        },
+        {
+          "machine": 2,
+          "processing": 5.519534699995863
+        },
+        {
+          "machine": 3,
+          "processing": 6.253653682818675
+        },
+        {
+          "machine": 4,
+          "processing": 5.077009633831838
+        },
+        {
+          "machine": 5,
+          "processing": 6.070234498671416
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 2.0249569151110043
+        },
+        {
+          "machine": 1,
+          "processing": 1.686403577261741
+        },
+        {
+          "machine": 2,
+          "processing": 1.8617662422031669
+        },
+        {
+          "machine": 3,
+          "processing": 2.226348366683708
+        },
+        {
+          "machine": 4,
+          "processing": 1.5417555394804558
+        },
+        {
+          "machine": 5,
+          "processing": 1.5495773091395995
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 97.58050744109883
+        },
+        {
+          "machine": 1,
+          "processing": 107.30843546946143
+        },
+        {
+          "machine": 2,
+          "processing": 76.61897719440326
+        },
+        {
+          "machine": 3,
+          "processing": 87.28937338878949
+        },
+        {
+          "machine": 4,
+          "processing": 83.69848483399204
+        },
+        {
+          "machine": 5,
+          "processing": 91.0049257832228
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 1.0
+        },
+        {
+          "machine": 1,
+          "processing": 1.0
+        },
+        {
+          "machine": 2,
+          "processing": 1.224672789918615
+        },
+        {
+          "machine": 3,
+          "processing": 1.02096502412931
+        },
+        {
+          "machine": 4,
+          "processing": 1.1826024288433192
+        },
+        {
+          "machine": 5,
+          "processing": 1.0
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 88.16280937587945
+        },
+        {
+          "machine": 1,
+          "processing": 111.97291887310178
+        },
+        {
+          "machine": 2,
+          "processing": 112.4308820153626
+        },
+        {
+          "machine": 3,
+          "processing": 82.55090202828083
+        },
+        {
+          "machine": 4,
+          "processing": 85.73830837712914
+        },
+        {
+          "machine": 5,
+          "processing": 92.05120738056485
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 14.379813930793766
+        },
+        {
+          "machine": 1,
+          "processing": 13.32836424808311
+        },
+        {
+          "machine": 2,
+          "processing": 11.022563060914674
+        },
+        {
+          "machine": 3,
+          "processing": 11.764858689928557
+        },
+        {
+          "machine": 4,
+          "processing": 13.574016979989334
+        },
+        {
+          "machine": 5,
+          "processing": 13.820114633569995
+        }
+      ]
+    ]
+  ],
+  "_meta": {
+    "source": "heuristiX v3 import",
+    "flexibility": 1.0,
+    "instance": "synth12x6_flex10"
+  }
+}

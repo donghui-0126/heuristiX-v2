@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}설정{% endblock %}
+{% block page_title %}설정{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="wb-card">
+      <div class="wb-card-header">
+        <i class="fa fa-clock text-accent"></i>
+        <span class="wb-card-title">시뮬레이션 파라미터</span>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">납기 긴박도 계수 (DDT)</label>
+        <input type="number" id="s-ddt" class="form-control form-control-sm" step="0.1" min="0.5" max="5.0">
+        <div class="form-text text-muted">
+          TWK 납기: d_j = release_time + ddt × Σmin_pt. 값이 작을수록 납기가 촉박합니다.
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">최종 평가 시드 수</label>
+        <input type="number" id="s-n-seeds-final" class="form-control form-control-sm" min="10" max="200">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">진화 적합도 평가 시드 수</label>
+        <input type="number" id="s-n-seeds-eval" class="form-control form-control-sm" min="3" max="20">
+      </div>
+    </div>
+
+    <div class="wb-card">
+      <div class="wb-card-header">
+        <i class="fa fa-dna text-accent"></i>
+        <span class="wb-card-title">진화 파라미터</span>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">세대 수 (Generations)</label>
+        <input type="number" id="s-n-iter" class="form-control form-control-sm" min="5" max="50">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">개체군 크기 (Pool Size)</label>
+        <input type="number" id="s-pool-size" class="form-control form-control-sm" min="10" max="30">
+        <div class="form-text text-muted">기본값: 15 (B1~B10 기본 규칙 + LLM 초기 생성 5개)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="wb-card">
+      <div class="wb-card-header">
+        <i class="fa fa-robot text-accent"></i>
+        <span class="wb-card-title">LLM 설정</span>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">모델</label>
+        <select id="s-llm-model" class="form-select form-select-sm">
+          <option value="gpt-4o-mini">gpt-4o-mini (빠름, 저렴)</option>
+          <option value="gpt-4o">gpt-4o (최고 성능)</option>
+          <option value="gpt-3.5-turbo">gpt-3.5-turbo (구버전)</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Temperature: <strong id="s-temp-val">0.8</strong></label>
+        <input type="range" class="form-range" id="s-llm-temp" min="0" max="1.5" step="0.1" value="0.8"
+               oninput="document.getElementById('s-temp-val').textContent=parseFloat(this.value).toFixed(1)">
+        <div class="form-text text-muted">높을수록 다양한 규칙 생성 / 낮을수록 보수적</div>
+      </div>
+    </div>
+
+    <div class="wb-card">
+      <div class="wb-card-header">
+        <i class="fa fa-bolt text-accent"></i>
+        <span class="wb-card-title">기본 시나리오 파라미터</span>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">S1 영향 비율 (기본값)</label>
+        <select id="s-s1-ratio" class="form-select form-select-sm">
+          <option value="0.10">10%</option>
+          <option value="0.20" selected>20%</option>
+          <option value="0.40">40%</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">S1 지연 배수 k (기본값)</label>
+        <select id="s-s1-k" class="form-select form-select-sm">
+          <option value="0.5">0.5</option>
+          <option value="1.0" selected>1.0</option>
+          <option value="2.0">2.0</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">S2 납기 계수 (기본값)</label>
+        <select id="s-s2-ddf" class="form-select form-select-sm">
+          <option value="0.3">0.3</option>
+          <option value="0.5" selected>0.5</option>
+          <option value="1.0">1.0</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="wb-card">
+      <div class="wb-card-header">
+        <i class="fa fa-clock text-accent"></i>
+        <span class="wb-card-title">시간 단위 설정</span>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">시뮬레이션 1 단위 = <strong id="s-tunit-val">1</strong> 분</label>
+        <input type="range" class="form-range" id="s-time-unit" min="1" max="60" step="1" value="1"
+               oninput="document.getElementById('s-tunit-val').textContent=this.value">
+        <div class="form-text text-muted">
+          시나리오 관리 페이지에서 <em>시간 직접 입력</em> 모드 사용 시 실제 시간 단위 변환에 쓰입니다.<br>
+          예: 1 단위 = 1분 → 지연 3시간 = 180 단위 / 1 단위 = 5분 → 지연 3시간 = 36 단위
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary flex-1" onclick="saveSettings()">
+        <i class="fa fa-save me-2"></i>설정 저장
+      </button>
+      <button class="btn btn-outline-secondary" onclick="loadSettings()">
+        <i class="fa fa-refresh me-1"></i>초기화
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadSettings() {
+  const d = await API.get('/api/settings');
+  if (!d.ok) return;
+  const s = d.data;
+  document.getElementById('s-ddt').value           = s.ddt;
+  document.getElementById('s-n-seeds-final').value  = s.n_seeds_final;
+  document.getElementById('s-n-seeds-eval').value   = s.n_seeds_eval;
+  document.getElementById('s-n-iter').value          = s.n_iter;
+  document.getElementById('s-pool-size').value       = s.pool_size;
+  document.getElementById('s-llm-model').value       = s.llm_model;
+  document.getElementById('s-llm-temp').value        = s.llm_temperature;
+  document.getElementById('s-temp-val').textContent  = s.llm_temperature;
+  document.getElementById('s-s1-ratio').value        = s.s1_affected_ratio;
+  document.getElementById('s-s1-k').value            = s.s1_delay_k;
+  document.getElementById('s-s2-ddf').value          = s.s2_due_date_factor;
+  if (s.time_unit_minutes != null) {
+    document.getElementById('s-time-unit').value = s.time_unit_minutes;
+    document.getElementById('s-tunit-val').textContent = s.time_unit_minutes;
+  }
+}
+
+async function saveSettings() {
+  const body = {
+    ddt:                parseFloat(document.getElementById('s-ddt').value),
+    n_seeds_final:      parseInt(document.getElementById('s-n-seeds-final').value),
+    n_seeds_eval:       parseInt(document.getElementById('s-n-seeds-eval').value),
+    n_iter:             parseInt(document.getElementById('s-n-iter').value),
+    pool_size:          parseInt(document.getElementById('s-pool-size').value),
+    llm_model:          document.getElementById('s-llm-model').value,
+    llm_temperature:    parseFloat(document.getElementById('s-llm-temp').value),
+    s1_affected_ratio:  parseFloat(document.getElementById('s-s1-ratio').value),
+    s1_delay_k:         parseFloat(document.getElementById('s-s1-k').value),
+    s2_due_date_factor: parseFloat(document.getElementById('s-s2-ddf').value),
+    time_unit_minutes:  parseInt(document.getElementById('s-time-unit').value),
+  };
+  const d = await API.post('/api/settings', body);
+  if (d.ok) toast('설정이 저장되었습니다!', 'success');
+  else toast(d.error, 'error');
+}
+
+loadSettings();
+</script>
+{% endblock %}

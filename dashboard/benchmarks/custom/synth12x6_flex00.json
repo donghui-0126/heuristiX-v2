@@ -1,0 +1,466 @@
+{
+  "machines": 6,
+  "jobs": [
+    [
+      [
+        {
+          "machine": 0,
+          "processing": 73.75592340343232
+        }
+      ],
+      [
+        {
+          "machine": 2,
+          "processing": 74.5476376128225
+        }
+      ],
+      [
+        {
+          "machine": 1,
+          "processing": 24.39416924985763
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 29.070832261996657
+        }
+      ],
+      [
+        {
+          "machine": 3,
+          "processing": 54.70049277574659
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 6.4003583815563445
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 3,
+          "processing": 27.26395620812198
+        }
+      ],
+      [
+        {
+          "machine": 1,
+          "processing": 33.008429992132626
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 38.34085594382685
+        }
+      ],
+      [
+        {
+          "machine": 2,
+          "processing": 65.91955739841647
+        }
+      ],
+      [
+        {
+          "machine": 2,
+          "processing": 59.91282152804577
+        }
+      ],
+      [
+        {
+          "machine": 5,
+          "processing": 78.72942020583318
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 2,
+          "processing": 75.14050237804788
+        }
+      ],
+      [
+        {
+          "machine": 1,
+          "processing": 72.4080223932902
+        }
+      ],
+      [
+        {
+          "machine": 2,
+          "processing": 12.413990746098916
+        }
+      ],
+      [
+        {
+          "machine": 3,
+          "processing": 24.146561601165324
+        }
+      ],
+      [
+        {
+          "machine": 5,
+          "processing": 45.9395511523527
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 11.096202488394496
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 4,
+          "processing": 29.332544997176527
+        }
+      ],
+      [
+        {
+          "machine": 4,
+          "processing": 39.378299735051236
+        }
+      ],
+      [
+        {
+          "machine": 2,
+          "processing": 18.88202186878632
+        }
+      ],
+      [
+        {
+          "machine": 2,
+          "processing": 42.01920432310837
+        }
+      ],
+      [
+        {
+          "machine": 4,
+          "processing": 99.36019478393733
+        }
+      ],
+      [
+        {
+          "machine": 1,
+          "processing": 15.713795863216623
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 5,
+          "processing": 29.485702328145926
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 3.109716020821948
+        }
+      ],
+      [
+        {
+          "machine": 2,
+          "processing": 70.11076906214765
+        }
+      ],
+      [
+        {
+          "machine": 4,
+          "processing": 8.85442066825515
+        }
+      ],
+      [
+        {
+          "machine": 4,
+          "processing": 79.82812883746404
+        }
+      ],
+      [
+        {
+          "machine": 3,
+          "processing": 51.542658151021286
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 5,
+          "processing": 44.663911655634735
+        }
+      ],
+      [
+        {
+          "machine": 1,
+          "processing": 26.46702284311052
+        }
+      ],
+      [
+        {
+          "machine": 4,
+          "processing": 80.59847415359047
+        }
+      ],
+      [
+        {
+          "machine": 5,
+          "processing": 48.99308499641675
+        }
+      ],
+      [
+        {
+          "machine": 2,
+          "processing": 97.56782323843788
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 8.014586028515732
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 3,
+          "processing": 47.84634963244344
+        }
+      ],
+      [
+        {
+          "machine": 5,
+          "processing": 27.073324107363284
+        }
+      ],
+      [
+        {
+          "machine": 4,
+          "processing": 51.02210672544894
+        }
+      ],
+      [
+        {
+          "machine": 4,
+          "processing": 81.08786260518035
+        }
+      ],
+      [
+        {
+          "machine": 3,
+          "processing": 33.68549246831686
+        }
+      ],
+      [
+        {
+          "machine": 4,
+          "processing": 25.568625834792332
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 2,
+          "processing": 3.089081685309879
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 34.08954388271961
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 72.95825475960113
+        }
+      ],
+      [
+        {
+          "machine": 1,
+          "processing": 87.88348314479802
+        }
+      ],
+      [
+        {
+          "machine": 4,
+          "processing": 59.26558255599869
+        }
+      ],
+      [
+        {
+          "machine": 5,
+          "processing": 13.889685203002578
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 4,
+          "processing": 80.86464976835319
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 74.27006480029846
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 31.550178678966635
+        }
+      ],
+      [
+        {
+          "machine": 4,
+          "processing": 72.48744805024585
+        }
+      ],
+      [
+        {
+          "machine": 4,
+          "processing": 45.65693592151991
+        }
+      ],
+      [
+        {
+          "machine": 1,
+          "processing": 82.05833168783926
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 2,
+          "processing": 24.04718898046623
+        }
+      ],
+      [
+        {
+          "machine": 5,
+          "processing": 32.976539106382276
+        }
+      ],
+      [
+        {
+          "machine": 1,
+          "processing": 2.587012534716479
+        }
+      ],
+      [
+        {
+          "machine": 2,
+          "processing": 60.58916057773721
+        }
+      ],
+      [
+        {
+          "machine": 5,
+          "processing": 106.86846371860088
+        }
+      ],
+      [
+        {
+          "machine": 2,
+          "processing": 15.387317210938205
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 3,
+          "processing": 39.962450634863536
+        }
+      ],
+      [
+        {
+          "machine": 2,
+          "processing": 31.905638150842787
+        }
+      ],
+      [
+        {
+          "machine": 3,
+          "processing": 46.205422822813794
+        }
+      ],
+      [
+        {
+          "machine": 0,
+          "processing": 40.525217867704384
+        }
+      ],
+      [
+        {
+          "machine": 2,
+          "processing": 72.52156220630415
+        }
+      ],
+      [
+        {
+          "machine": 1,
+          "processing": 29.18405893866869
+        }
+      ]
+    ],
+    [
+      [
+        {
+          "machine": 2,
+          "processing": 70.60626030723047
+        }
+      ],
+      [
+        {
+          "machine": 1,
+          "processing": 18.969844028105715
+        }
+      ],
+      [
+        {
+          "machine": 2,
+          "processing": 74.9380961212623
+        }
+      ],
+      [
+        {
+          "machine": 5,
+          "processing": 6.449694102059936
+        }
+      ],
+      [
+        {
+          "machine": 2,
+          "processing": 34.2596033990242
+        }
+      ],
+      [
+        {
+          "machine": 2,
+          "processing": 54.49038425469321
+        }
+      ]
+    ]
+  ],
+  "_meta": {
+    "source": "heuristiX v3 import",
+    "flexibility": 0.0,
+    "instance": "synth12x6_flex00"
+  }
+}

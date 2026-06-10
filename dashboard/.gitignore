@@ -1,0 +1,44 @@
+# External benchmark data (clone separately)
+fjsp-instances/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+*.whl
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env.backup
+
+# Secrets — NEVER commit
+.env
+
+# Runtime outputs
+results/*.json
+results/*.md
+results/*.pdf
+results/*.docx
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+desktop.ini

@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}홈 — FJSSP 연구 워크벤치{% endblock %}
+{% block page_title %}홈{% endblock %}
+
+{% block content %}
+<div class="stat-grid" id="stat-grid">
+  <div class="stat-card"><div class="stat-value" id="s-instances">—</div><div class="stat-label">벤치마크 인스턴스</div></div>
+  <div class="stat-card"><div class="stat-value" id="s-rules">—</div><div class="stat-label">기본 규칙 수</div></div>
+  <div class="stat-card"><div class="stat-value" id="s-experiments">—</div><div class="stat-label">실행된 실험</div></div>
+  <div class="stat-card"><div class="stat-value" id="s-evolutions">—</div><div class="stat-label">진화 실행 횟수</div></div>
+</div>
+
+<div class="row g-4">
+  <!-- 빠른 실행 -->
+  <div class="col-lg-5">
+    <div class="wb-card">
+      <div class="wb-card-header">
+        <i class="fa fa-play-circle text-accent"></i>
+        <span class="wb-card-title">빠른 기본 규칙 실행</span>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">벤치마크 패밀리</label>
+        <select id="qr-family" class="form-select form-select-sm" onchange="loadInstances()">
+          <option value="brandimarte">Brandimarte</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">인스턴스</label>
+        <select id="qr-instance" class="form-select form-select-sm"></select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">시나리오</label>
+        <select id="qr-scenario" class="form-select form-select-sm">
+          <option value="S0">S0 — 정상 운영</option>
+          <option value="S1">S1 — 부품 지연</option>
+          <option value="S2">S2 — 긴급 주문</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">시드 수: <span id="qr-seeds-val">30</span></label>
+        <input type="range" class="form-range" id="qr-seeds" min="5" max="100" value="30"
+               oninput="document.getElementById('qr-seeds-val').textContent=this.value">
+      </div>
+      <button class="btn btn-primary w-100" onclick="quickRun()">
+        <i class="fa fa-play me-2"></i>기본 규칙 실행
+      </button>
+    </div>
+  </div>
+
+  <!-- 최근 결과 -->
+  <div class="col-lg-7">
+    <div class="wb-card">
+      <div class="wb-card-header">
+        <i class="fa fa-clock-rotate-left text-accent"></i>
+        <span class="wb-card-title">최근 결과</span>
+      </div>
+      <div id="recent-files">
+        <p class="text-muted small">로딩 중...</p>
+      </div>
+    </div>
+    <div id="qr-result-card" style="display:none"></div>
+  </div>
+</div>
+
+<div id="qr-progress" style="display:none" class="mt-3"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadStats() {
+  const d = await API.get('/api/home/stats');
+  if (!d.ok) return;
+  const s = d.data;
+  document.getElementById('s-instances').textContent = s.n_instances;
+  document.getElementById('s-rules').textContent = s.n_baseline_rules;
+  document.getElementById('s-experiments').textContent = s.n_experiments;
+  document.getElementById('s-evolutions').textContent = s.n_evolutions;
+
+  const el = document.getElementById('recent-files');
+  if (!s.recent_files.length) {
+    el.innerHTML = '<p class="text-muted small">아직 결과가 없습니다. 실험을 실행해 보세요!</p>';
+    return;
+  }
+  el.innerHTML = s.recent_files.map(f => `
+    <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color:var(--border)!important">
+      <span class="small text-secondary"><i class="fa fa-file-code me-2"></i>${f.file}</span>
+      <span class="small text-muted">${f.mtime}</span>
+    </div>`).join('');
+}
+
+async function loadInstances() {
+  const fam = document.getElementById('qr-family').value;
+  const d = await API.get('/api/benchmarks');
+  if (!d.ok) return;
+  const list = d.data[fam] || [];
+  const sel = document.getElementById('qr-instance');
+  sel.innerHTML = list.map(n => `<option value="${n}">${n.toUpperCase()}</option>`).join('');
+}
+
+async function loadFamilies() {
+  const d = await API.get('/api/benchmarks');
+  if (!d.ok) return;
+  const sel = document.getElementById('qr-family');
+  sel.innerHTML = Object.keys(d.data).map(f =>
+    `<option value="${f}">${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join('');
+  loadInstances();
+}
+
+async function quickRun() {
+  const body = {
+    instance: document.getElementById('qr-instance').value,
+    family:   document.getElementById('qr-family').value,
+    scenario: document.getElementById('qr-scenario').value,
+    n_seeds:  parseInt(document.getElementById('qr-seeds').value),
+  };
+
+  const progDiv = document.getElementById('qr-progress');
+  progDiv.style.display = 'block';
+  const prog = makeProgressCard(progDiv, `${body.instance.toUpperCase()} / ${body.scenario} — 기본 규칙 실행 중...`);
+  setStatus('실행 중...', 'warning');
+
+  const res = await API.post('/api/baselines/run', body);
+  if (!res.ok) { toast(res.error, 'error'); return; }
+
+  streamTask(res.task_id, {
+    onLog: (msg) => prog.appendLog(msg),
+    onProgress: (p) => prog.setProgress(p),
+    onDone: (result) => {
+      setStatus('준비', 'success');
+      toast('기본 규칙 실행 완료!', 'success');
+      showQuickResult(result);
+    },
+    onError: (e) => { setStatus('오류', 'danger'); toast(e, 'error'); },
+  });
+}
+
+function showQuickResult(result) {
+  const data = result.results || {};
+  const rows = Object.entries(data).sort((a,b) => a[1].mean - b[1].mean);
+  const card = document.getElementById('qr-result-card');
+  card.style.display = 'block';
+  card.innerHTML = `
+    <div class="wb-card">
+      <div class="wb-card-header">
+        <i class="fa fa-table text-accent"></i>
+        <span class="wb-card-title">결과 — ${result.instance?.toUpperCase()} / ${result.scenario}</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead><tr><th>규칙</th><th>AT 평균</th><th>AT 표준편차</th><th>납기 위반%</th><th>ARI</th></tr></thead>
+          <tbody>
+            ${rows.map(([bid, v]) => `
+              <tr>
+                <td><span class="badge badge-baseline">${bid}</span></td>
+                <td><strong>${fmt(v.mean)}</strong></td>
+                <td>${fmt(v.std)}</td>
+                <td>${fmt(v.ptj, 1)}%</td>
+                <td class="${(v.ari||0)>0 ? 'text-danger' : 'text-success'}">${fmtPct(v.ari)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+loadStats();
+loadFamilies();
+</script>
+{% endblock %}

@@ -1,0 +1,46 @@
+{
+  "method": "heuristiX-P3",
+  "method_kr": "P3 — P2 + 메모리 누적",
+  "instance": "synth12x6_flex00",
+  "scenario": "S2",
+  "summary": {
+    "mean": 186.0908563133621,
+    "std": 30.44951166552303,
+    "ari": 3.3029863183078523,
+    "ptj": 83.23076923076923,
+    "mit": 2031.9269702782628,
+    "makespan": 837.4088534101295
+  },
+  "best_rule": {
+    "rule_id": "heuristiX-P3-S2-synth12x6_flex00",
+    "code": "exp_(-max_(0, (current_time + remaining_pt) - due_date)) * iff(urgent_order_flag, 3.0, 1.5) / (remaining_pt + 2) + (current_time - part_available_time) / max_(remaining_pt + 3, 1) - 0.07 * processing_time",
+    "generation": "—",
+    "operator": "P3",
+    "operator_kr": "P3 — P2 + 메모리 누적"
+  },
+  "iterations": 20,
+  "replications": 100,
+  "convergence": [
+    192.44736649875992,
+    192.44736649875992,
+    191.85758826539276,
+    191.11614831198528,
+    188.42569796280534,
+    187.57348589289606,
+    186.99164657977937,
+    186.99164657977937,
+    186.70018933620736,
+    186.0908563133621,
+    186.0908563133621,
+    186.0908563133621,
+    186.0908563133621,
+    186.0908563133621,
+    186.0908563133621,
+    186.0908563133621,
+    186.0908563133621,
+    186.0908563133621,
+    186.0908563133621,
+    186.0908563133621
+  ],
+  "_source": "p123_battery_v3_strict"
+}

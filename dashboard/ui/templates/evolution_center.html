@@ -1,0 +1,458 @@
+{% extends "base.html" %}
+{% block title %}진화 센터{% endblock %}
+{% block page_title %}진화 센터{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+  <!-- 왼쪽: 실행 설정 -->
+  <div class="col-lg-3">
+    <div class="wb-card">
+      <div class="wb-card-header">
+        <i class="fa fa-dna text-accent"></i>
+        <span class="wb-card-title">진화 실행</span>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">패밀리</label>
+        <select id="ev-family" class="form-select form-select-sm" onchange="onFamilyChange()"></select>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">인스턴스</label>
+        <select id="ev-instance" class="form-select form-select-sm" onchange="saveSelection()"></select>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">시나리오</label>
+        <select id="ev-scenario" class="form-select form-select-sm">
+          <option value="S0">S0 — 정상 운영</option>
+          <option value="S1">S1 — 부품 지연</option>
+          <option value="S2">S2 — 긴급 주문</option>
+        </select>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">LLM 방식</label>
+        <select id="ev-method" class="form-select form-select-sm">
+          <option value="P1">P1 — 외부 변수 미사용</option>
+          <option value="P2" selected>P2 — 모든 변수 활용</option>
+          <option value="P3">P3 — 경험 메모리 포함</option>
+        </select>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">세대 수: <strong id="ev-iter-val">20</strong></label>
+        <input type="range" class="form-range" id="ev-iter" min="5" max="30" value="20"
+               oninput="document.getElementById('ev-iter-val').textContent=this.value">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">최종 평가 시드: <strong id="ev-seeds-val">50</strong></label>
+        <input type="range" class="form-range" id="ev-seeds" min="5" max="100" step="5" value="50"
+               oninput="document.getElementById('ev-seeds-val').textContent=this.value">
+      </div>
+      <button class="btn btn-primary w-100" onclick="startEvolution()">
+        <i class="fa fa-play me-2"></i>진화 시작
+      </button>
+      <div class="small text-muted mt-2">
+        초기 개체군: B1~B10 + LLM 5개 = 15개<br>
+        생존: 상위 7개 / 세대당 신규: 8개
+      </div>
+    </div>
+
+    <!-- 과거 결과 -->
+    <div class="wb-card mt-3">
+      <div class="wb-card-header">
+        <i class="fa fa-clock-rotate-left text-accent"></i>
+        <span class="wb-card-title">과거 결과 불러오기</span>
+      </div>
+      <div id="past-results" class="small text-muted">로딩 중...</div>
+    </div>
+  </div>
+
+  <!-- 오른쪽: 탭 -->
+  <div class="col-lg-9">
+    <div id="ev-progress" style="display:none" class="mb-3"></div>
+
+    <ul class="nav nav-tabs mb-0" id="evTabs">
+      <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-progress">📈 진화 진행</a></li>
+      <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-genlog">🧬 세대별 생성 로그</a></li>
+      <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-genealogy">🌳 계보 그래프</a></li>
+      <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-best">⭐ 최적 규칙</a></li>
+      <li class="nav-item ms-auto d-flex align-items-center pe-2">
+        <button class="btn btn-sm btn-outline-secondary" onclick="downloadCurrentEvoResult()" title="현재 결과 JSON 다운로드">
+          <i class="fa fa-download me-1"></i>JSON 저장
+        </button>
+      </li>
+      <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-pool">📋 풀 스냅샷</a></li>
+    </ul>
+    <div class="tab-content">
+
+      <!-- 진화 진행 -->
+      <div class="tab-pane fade show active" id="tab-progress">
+        <div id="chart-evo-progress" style="height:360px"></div>
+        <div id="evo-summary" class="mt-3"></div>
+      </div>
+
+      <!-- 세대별 생성 로그 (핵심 신규 탭) -->
+      <div class="tab-pane fade" id="tab-genlog">
+        <div class="d-flex gap-2 mb-3 pt-3">
+          <div class="me-2">
+            <label class="form-label mb-1">세대 필터</label>
+            <select id="log-iter-filter" class="form-select form-select-sm" onchange="filterGenLog()">
+              <option value="">전체 세대</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label mb-1">연산자 필터</label>
+            <select id="log-op-filter" class="form-select form-select-sm" onchange="filterGenLog()">
+              <option value="">전체</option>
+              <option value="LLM_INIT">LLM 초기 생성</option>
+              <option value="E1">E1 변이</option>
+              <option value="E2">E2 교차</option>
+              <option value="M1">M1 반성적 개선</option>
+              <option value="M2">M2 단순화</option>
+            </select>
+          </div>
+          <div class="ms-auto align-self-end">
+            <span id="log-count" class="badge bg-secondary">0건</span>
+          </div>
+        </div>
+        <div id="genlog-list"></div>
+      </div>
+
+      <!-- 계보 그래프 -->
+      <div class="tab-pane fade" id="tab-genealogy">
+        <div id="chart-genealogy" style="height:500px"></div>
+      </div>
+
+      <!-- 최적 규칙 -->
+      <div class="tab-pane fade" id="tab-best">
+        <div id="best-rule-info" class="mb-3 pt-3"></div>
+        <div id="best-monaco" style="height:380px; border:1px solid var(--border); border-radius:8px"></div>
+      </div>
+
+      <!-- 풀 스냅샷 -->
+      <div class="tab-pane fade" id="tab-pool">
+        <div class="pt-3" id="pool-table"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+<script>
+let bestEditor = null;
+let allGenLog  = [];
+
+require.config({paths:{vs:'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs'}});
+require(['vs/editor/editor.main'], function() {
+  bestEditor = monaco.editor.create(document.getElementById('best-monaco'), {
+    value:'# 진화를 실행하면 최적 규칙이 여기에 표시됩니다',
+    language:'python', theme:'vs-dark', readOnly:true,
+    minimap:{enabled:false}, fontSize:13, scrollBeyondLastLine:false,
+  });
+});
+
+let _allBenchmarks = {};
+let _currentEvoData = null;
+
+function saveSelection() {
+  const f = document.getElementById('ev-family').value;
+  const i = document.getElementById('ev-instance').value;
+  if (f) localStorage.setItem('fjssp_family', f);
+  if (i) localStorage.setItem('fjssp_instance', i);
+}
+
+function onFamilyChange() {
+  const family = document.getElementById('ev-family').value;
+  const instances = _allBenchmarks[family] || [];
+  const saved = localStorage.getItem('fjssp_instance');
+  document.getElementById('ev-instance').innerHTML =
+    instances.map(n => `<option value="${n}"${n===saved?' selected':''}>${n.toUpperCase()}</option>`).join('');
+  saveSelection();
+}
+
+async function loadInstances() {
+  const d = await API.get('/api/benchmarks');
+  if (!d.ok) return;
+  _allBenchmarks = d.data;
+  const savedFamily = localStorage.getItem('fjssp_family');
+  const families = Object.keys(d.data);
+  const selFamily = families.includes(savedFamily) ? savedFamily : families[0];
+  document.getElementById('ev-family').innerHTML =
+    families.map(f => `<option value="${f}"${f===selFamily?' selected':''}>${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join('');
+  onFamilyChange();
+}
+
+async function loadPastResults() {
+  const d = await API.get('/api/evolution/results');
+  if (!d.ok) return;
+  const el = document.getElementById('past-results');
+  if (!d.data.length) { el.textContent = '저장된 결과 없음'; return; }
+  el.innerHTML = d.data.map(r => `
+    <div class="mb-2 p-2 rounded" style="background:var(--bg-surface)">
+      <div class="fw-bold small" style="cursor:pointer" onclick="loadResult('${r.file}')">${r.method} — ${r.instance?.toUpperCase()}</div>
+      <div class="d-flex justify-content-between align-items-center mt-1">
+        <div class="text-muted" style="font-size:11px">${r.scenario} · AT=${fmt(r.best_at)} · ARI=${fmtPct(r.ari)}</div>
+        <button class="btn btn-icon btn-sm" onclick="downloadEvoResult('${r.file}')" title="JSON 다운로드" style="padding:2px 6px">
+          <i class="fa fa-download" style="font-size:11px"></i>
+        </button>
+      </div>
+    </div>`).join('');
+}
+
+async function startEvolution() {
+  const params = {
+    instance: document.getElementById('ev-instance').value,
+    family:   document.getElementById('ev-family').value,
+    scenario: document.getElementById('ev-scenario').value,
+    method:   document.getElementById('ev-method').value,
+    n_iter:   parseInt(document.getElementById('ev-iter').value),
+    n_seeds:  parseInt(document.getElementById('ev-seeds').value),
+  };
+
+  const progDiv = document.getElementById('ev-progress');
+  progDiv.style.display = 'block';
+  const prog = makeProgressCard(progDiv,
+    `${params.method} 진화: ${params.instance.toUpperCase()} / ${params.scenario}`);
+  setStatus('진화 중...', 'warning');
+
+  const liveAT = [];
+  const r = await API.post('/api/evolution/start', params);
+  if (!r.ok) { toast(r.error, 'error'); return; }
+
+  streamTask(r.task_id, {
+    onLog: (msg) => {
+      prog.appendLog(msg);
+      const m = msg.match(/최적 AT=(\d+\.\d+)/);
+      if (m) { liveAT.push(parseFloat(m[1])); updateLiveChart(liveAT); }
+    },
+    onProgress: p => prog.setProgress(p),
+    onDone: result => {
+      setStatus('준비', 'success');
+      toast(`진화 완료! ARI=${fmtPct(result.summary?.ari)}`, 'success');
+      displayResult(result);
+      loadPastResults();
+    },
+    onError: e => { setStatus('오류', 'danger'); toast(e, 'error'); },
+  });
+}
+
+function updateLiveChart(atList) {
+  Plotly.react('chart-evo-progress', [{
+    x: atList.map((_,i)=>i+1), y: atList,
+    type:'scatter', mode:'lines+markers',
+    line:{color:'#4493f8',width:2}, marker:{size:5},
+    name:'최적 AT',
+  }], plotLayout({
+    title:'세대별 최적 AT 추이',
+    xaxis:{title:'세대 (Generation)'},
+    yaxis:{title:'평균 납기 지연 (AT)'},
+  }));
+}
+
+async function loadResult(fname) {
+  const d = await API.get(`/api/evolution/result/${fname}`);
+  if (!d.ok) { toast(d.error,'error'); return; }
+  displayResult(d.data);
+  document.getElementById('evTabs').querySelectorAll('.nav-link')[0].click();
+}
+
+async function downloadEvoResult(fname) {
+  const d = await API.get(`/api/evolution/result/${fname}`);
+  if (!d.ok) { toast(d.error, 'error'); return; }
+  const blob = new Blob([JSON.stringify(d.data, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fname;
+  a.click();
+  toast('JSON 파일 저장 완료', 'success');
+}
+
+function downloadCurrentEvoResult() {
+  if (!_currentEvoData) { toast('표시된 결과가 없습니다.', 'warning'); return; }
+  const inst = _currentEvoData.instance || 'result';
+  const meth = _currentEvoData.method  || 'evo';
+  const blob = new Blob([JSON.stringify(_currentEvoData, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `evolution_${meth}_${inst}.json`;
+  a.click();
+  toast('JSON 파일 저장 완료', 'success');
+}
+
+function displayResult(data) {
+  _currentEvoData = data;
+  if ((data.iteration_best_at||[]).length) updateLiveChart(data.iteration_best_at);
+  drawGenealogyGraph(data.genealogy || []);
+  buildGenLog(data.generation_log || []);
+
+  // 최적 규칙 정보
+  const best = data.best_rule || {};
+  const s    = data.summary   || {};
+  document.getElementById('best-rule-info').innerHTML = `
+    <div class="row g-3">
+      <div class="col"><div class="stat-card">
+        <div class="stat-value" style="font-size:18px">${best.rule_id||'—'}</div>
+        <div class="stat-label">규칙 ID</div></div></div>
+      <div class="col"><div class="stat-card">
+        <div class="stat-value" style="font-size:18px">${fmt(s.mean)}</div>
+        <div class="stat-label">평균 AT (최종 평가)</div></div></div>
+      <div class="col"><div class="stat-card">
+        <div class="stat-value" style="font-size:18px; color:var(--green)">${fmtPct(s.ari)}</div>
+        <div class="stat-label">ARI (기본 규칙 대비)</div></div></div>
+      <div class="col"><div class="stat-card">
+        <div class="stat-value" style="font-size:18px">${best.generation||0}세대</div>
+        <div class="stat-label">발견 세대</div></div></div>
+      <div class="col"><div class="stat-card">
+        <div class="stat-value" style="font-size:18px">${best.operator_kr||best.operator||'—'}</div>
+        <div class="stat-label">생성 방식</div></div></div>
+    </div>`;
+
+  if (bestEditor && best.code) bestEditor.setValue(best.code);
+
+  // 풀 스냅샷
+  const lastSnap = (data.pool_snapshots||[]).slice(-1)[0] || [];
+  document.getElementById('pool-table').innerHTML = buildTable(
+    ['규칙 ID','세대','생성 방식','부모 규칙','평균 AT'],
+    lastSnap.map(r => [
+      `<span class="badge ${r.operator==='BASELINE'?'badge-baseline':'badge-llm'}">${r.rule_id}</span>`,
+      r.generation+'세대', r.operator_kr||r.operator,
+      (r.parents||[]).join(' + ')||'—',
+      r.avg_at != null ? fmt(r.avg_at) : '—',
+    ])
+  );
+}
+
+// ── 세대별 생성 로그 ──────────────────────────────────────
+function buildGenLog(logEntries) {
+  allGenLog = logEntries;
+
+  // 세대 필터 옵션 구성
+  const iters = [...new Set(logEntries.map(e => e.iteration))].sort((a,b)=>a-b);
+  const sel = document.getElementById('log-iter-filter');
+  sel.innerHTML = '<option value="">전체 세대</option>' +
+    iters.map(i => `<option value="${i}">${i===0?'0세대 (초기화)':i+'세대'}</option>`).join('');
+
+  filterGenLog();
+}
+
+function filterGenLog() {
+  const iterFilter = document.getElementById('log-iter-filter').value;
+  const opFilter   = document.getElementById('log-op-filter').value;
+
+  let filtered = allGenLog;
+  if (iterFilter !== '') filtered = filtered.filter(e => String(e.iteration) === iterFilter);
+  if (opFilter)          filtered = filtered.filter(e => e.operator === opFilter);
+
+  document.getElementById('log-count').textContent = filtered.length + '건';
+
+  const container = document.getElementById('genlog-list');
+  if (!filtered.length) {
+    container.innerHTML = '<div class="text-center text-muted p-4">해당 조건의 로그가 없습니다.</div>';
+    return;
+  }
+
+  const opColors = {
+    LLM_INIT: 'var(--purple)', E1: 'var(--green)',
+    E2: 'var(--yellow)', M1: 'var(--orange)', M2: 'var(--accent)',
+  };
+
+  container.innerHTML = filtered.map((e, idx) => {
+    const entered  = e.entered_pool;
+    const atText   = e.avg_at != null ? `AT = ${fmt(e.avg_at)}` : '평가 전';
+    const color    = opColors[e.operator] || 'var(--text-secondary)';
+    const code     = (e.code||'').trim();
+    const codeSnip = code.length > 400 ? code.slice(0,400) + '\n...' : code;
+    const promptSnip = (e.prompt_summary||'').slice(0, 300);
+
+    return `
+    <div class="wb-card mb-3">
+      <div class="wb-card-header" style="cursor:pointer" onclick="toggleLog(${idx})">
+        <span class="badge me-2" style="background:${color}20; color:${color}; border:1px solid ${color}40">
+          ${e.iteration}세대 · ${e.operator_kr||e.operator}
+        </span>
+        <span class="wb-card-title">${e.rule_id}</span>
+        <div class="ms-auto d-flex gap-2 align-items-center">
+          ${entered
+            ? '<span class="badge badge-success">✓ 풀 진입</span>'
+            : '<span class="badge badge-failure">✗ 탈락</span>'}
+          <span class="small text-muted">${atText}</span>
+          <i class="fa fa-chevron-down small text-muted" id="chevron-${idx}"></i>
+        </div>
+      </div>
+      <div id="log-detail-${idx}" style="display:none">
+        ${e.parents?.length ? `
+        <div class="mb-2">
+          <span class="small text-muted">부모 규칙:</span>
+          ${e.parents.map(p=>`<span class="badge badge-baseline ms-1">${p}</span>`).join('')}
+        </div>` : ''}
+        <div class="mb-2">
+          <div class="small text-muted mb-1">📝 LLM 프롬프트 요약 (앞 300자)</div>
+          <pre style="font-size:11px;color:#8b949e;background:var(--bg-surface);padding:10px;border-radius:6px;max-height:120px;overflow-y:auto;white-space:pre-wrap;margin:0">${promptSnip}</pre>
+        </div>
+        <div>
+          <div class="small text-muted mb-1">💻 생성된 규칙 코드</div>
+          <pre style="font-size:11px;color:#7ee787;background:#0a0d12;padding:10px;border-radius:6px;max-height:200px;overflow-y:auto;white-space:pre-wrap;margin:0">${codeSnip}</pre>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleLog(idx) {
+  const el     = document.getElementById(`log-detail-${idx}`);
+  const chev   = document.getElementById(`chevron-${idx}`);
+  const hidden = el.style.display === 'none';
+  el.style.display   = hidden ? 'block' : 'none';
+  chev.style.transform = hidden ? 'rotate(180deg)' : 'rotate(0deg)';
+  chev.style.transition = 'transform 0.2s';
+}
+
+// ── 계보 그래프 ────────────────────────────────────────────
+function drawGenealogyGraph(genealogy) {
+  if (!genealogy.length) return;
+  const nodeMap = {};
+  genealogy.forEach((r,i) => { nodeMap[r.rule_id] = i; });
+
+  const xs=[], ys=[], texts=[], colors=[];
+  genealogy.forEach((r,i) => {
+    xs.push((r.generation||0) * 2.5);
+    ys.push(i % 12);
+    texts.push(r.rule_id);
+    colors.push(
+      r.operator==='BASELINE' ? '#4493f8' :
+      r.operator==='LLM_INIT' ? '#bc8cff' :
+      r.operator==='E1'       ? '#3fb950' :
+      r.operator==='E2'       ? '#d29922' :
+      r.operator==='M1'       ? '#f85149' : '#79c0ff'
+    );
+  });
+
+  const edgeX=[], edgeY=[];
+  genealogy.forEach((r,i) => {
+    (r.parents||[]).forEach(pId => {
+      const pi = nodeMap[pId];
+      if (pi != null) { edgeX.push(xs[pi],xs[i],null); edgeY.push(ys[pi],ys[i],null); }
+    });
+  });
+
+  Plotly.newPlot('chart-genealogy', [
+    {type:'scatter', x:edgeX, y:edgeY, mode:'lines',
+     line:{color:'#30363d',width:1}, hoverinfo:'skip'},
+    {type:'scatter', x:xs, y:ys, mode:'markers+text',
+     marker:{size:14, color:colors, line:{color:'#0d1117',width:1}},
+     text:texts, textposition:'top center',
+     textfont:{size:9, color:'#8b949e'},
+     hovertemplate:'<b>%{text}</b><extra></extra>'},
+  ], plotLayout({
+    title:'규칙 계보 그래프 (x=세대, 색상=생성 방식)',
+    showlegend:false,
+    xaxis:{title:'세대', showgrid:false, zeroline:false},
+    yaxis:{showgrid:false, zeroline:false, showticklabels:false},
+  }));
+}
+
+loadInstances();
+loadPastResults();
+</script>
+{% endblock %}

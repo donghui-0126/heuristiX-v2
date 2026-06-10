@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}시뮬레이션 결과{% endblock %}
+{% block page_title %}시뮬레이션 결과{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-auto">
+    <select id="res-file-sel" class="form-select form-select-sm" onchange="loadSelected(this.value)">
+      <option value="">결과 파일을 선택하세요...</option>
+    </select>
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-sm btn-icon" onclick="loadFileList()" title="새로고침">
+      <i class="fa fa-refresh"></i>
+    </button>
+  </div>
+  <div class="col-auto ms-auto d-flex gap-2">
+    <button class="btn btn-sm btn-outline-secondary" onclick="exportCurrentCSV()">
+      <i class="fa fa-download me-1"></i>CSV 내보내기
+    </button>
+    <button class="btn btn-sm btn-outline-secondary" onclick="exportCurrentJSON()">
+      <i class="fa fa-file-code me-1"></i>JSON 저장
+    </button>
+  </div>
+</div>
+
+<div id="no-results" class="wb-alert info">
+  <i class="fa fa-info-circle" style="color:var(--accent)"></i>
+  <span>시나리오 관리 또는 홈 페이지에서 실험을 먼저 실행한 후 결과 파일을 선택하세요.</span>
+</div>
+
+<div id="results-content" style="display:none">
+  <div class="stat-grid" id="sum-stats"></div>
+
+  <ul class="nav nav-tabs mb-0" id="resTabs">
+    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-table">📊 결과 테이블</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-bar">📈 막대 차트</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-box">📦 박스플롯</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-radar">🕸️ 레이더 차트</a></li>
+  </ul>
+  <div class="tab-content">
+    <div class="tab-pane fade show active" id="tab-table">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0" id="res-main-table">
+          <thead><tr>
+            <th>#</th><th>규칙</th><th>AT 평균</th><th>AT 표준편차</th>
+            <th>납기 위반%</th><th>기계 유휴 시간</th><th>ARI</th><th>p-값</th>
+          </tr></thead>
+          <tbody id="res-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="tab-pane fade" id="tab-bar">
+      <div id="chart-bar" style="height:380px"></div>
+    </div>
+    <div class="tab-pane fade" id="tab-box">
+      <div id="chart-box" style="height:400px"></div>
+    </div>
+    <div class="tab-pane fade" id="tab-radar">
+      <div id="chart-radar" style="height:420px"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentData = null;
+
+async function loadFileList() {
+  const d = await API.get('/api/results');
+  if (!d.ok) return;
+  const sel = document.getElementById('res-file-sel');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">결과 파일을 선택하세요...</option>';
+  d.data.forEach(item => {
+    const opt = document.createElement('option');
+    opt.value = item.file;
+    opt.textContent = item.file.replace('baselines_','').replace('.json','');
+    sel.appendChild(opt);
+  });
+  if (prev) sel.value = prev;
+
+  if (d.data.length > 0) {
+    document.getElementById('no-results').style.display = 'none';
+    if (!sel.value && d.data[0]) {
+      sel.value = d.data[0].file;
+      loadSelected(d.data[0].file);
+    }
+  }
+}
+
+async function loadSelected(fname) {
+  if (!fname) return;
+  const d = await API.get(`/api/results/${fname}`);
+  if (!d.ok) { toast(d.error, 'error'); return; }
+  currentData = d.data;
+  displayResults(d.data);
+}
+
+function displayResults(data) {
+  document.getElementById('no-results').style.display = 'none';
+  document.getElementById('results-content').style.display = 'block';
+
+  const entries = Object.entries(data).sort((a,b) => a[1].mean - b[1].mean);
+
+  const best  = entries[0];
+  const worst = entries[entries.length - 1];
+  document.getElementById('sum-stats').innerHTML = [
+    ['최적 AT', fmt(best?.[1]?.mean) + ' (' + (best?.[0]||'?') + ')'],
+    ['최악 AT', fmt(worst?.[1]?.mean) + ' (' + (worst?.[0]||'?') + ')'],
+    ['규칙 수', entries.length],
+    ['최적 ARI', fmtPct(best?.[1]?.ari)],
+  ].map(([l,v]) => `<div class="stat-card">
+    <div class="stat-value" style="font-size:18px">${v}</div>
+    <div class="stat-label">${l}</div>
+  </div>`).join('');
+
+  const tbody = document.getElementById('res-table-body');
+  tbody.innerHTML = entries.map(([bid, v], i) => {
+    const ari = v.ari || 0;
+    const p   = v.wilcoxon?.p;
+    const sig = p != null && p < 0.05 ? '★' : '';
+    return `<tr>
+      <td>${i+1}</td>
+      <td><span class="badge ${bid.startsWith('B')?'badge-baseline':'badge-llm'}">${bid}</span></td>
+      <td><strong>${fmt(v.mean)}</strong></td>
+      <td>${fmt(v.std)}</td>
+      <td>${fmt(v.ptj,1)}%</td>
+      <td>${fmt(v.mit,1)}</td>
+      <td class="${ari>0?'text-danger':'text-success'}">${fmtPct(ari)}</td>
+      <td class="${p!=null&&p<0.05?'text-success':'text-muted'}">${sig}${p!=null?fmtP(p):'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const labels = entries.map(([b]) => b);
+  const means  = entries.map(([,v]) => v.mean);
+  const stds   = entries.map(([,v]) => v.std);
+
+  Plotly.newPlot('chart-bar', [{
+    type:'bar', x:labels, y:means,
+    error_y:{type:'data', array:stds, visible:true, color:'#8b949e'},
+    marker:{color: means.map((_,i) => COLORS[i%COLORS.length])},
+  }], plotLayout({title:'평균 납기 지연 (평균 ± 표준편차)', yaxis:{title:'AT'}}));
+
+  const boxTraces = entries.map(([bid, v], i) => ({
+    type:'box', y: v.at_list || [v.mean],
+    name: bid,
+    boxpoints: v.at_list?.length > 30 ? 'outliers' : 'all',
+    marker:{color: COLORS[i%COLORS.length]},
+    line:{color: COLORS[i%COLORS.length]},
+  }));
+  Plotly.newPlot('chart-box', boxTraces,
+    plotLayout({title:'AT 분포 (100 시드)', yaxis:{title:'AT'}, showlegend:false}));
+
+  const metricsKeys = ['mean','std','ptj','mit'];
+  const metricLabels = ['AT 평균','AT 표준편차','납기 위반%','기계 유휴 시간'];
+  const maxVals = metricsKeys.map(k => Math.max(...entries.map(([,v]) => v[k]||0)) || 1);
+  const radarTraces = entries.slice(0,6).map(([bid, v], i) => ({
+    type:'scatterpolar',
+    r: metricsKeys.map((k,j) => ((v[k]||0) / maxVals[j])),
+    theta: metricLabels,
+    fill:'toself',
+    name: bid,
+    line:{color: COLORS[i%COLORS.length]},
+    fillcolor: COLORS[i%COLORS.length].replace(')', ',0.1)').replace('rgb','rgba'),
+  }));
+  Plotly.newPlot('chart-radar', radarTraces,
+    plotLayout({
+      title:'다중 지표 레이더 (상위 6개 규칙, 정규화)',
+      polar:{
+        bgcolor:'#1c2128',
+        angularaxis:{color:'#30363d'},
+        radialaxis:{color:'#30363d', gridcolor:'#30363d', range:[0,1]},
+      },
+    }));
+}
+
+function exportCurrentJSON() {
+  if (!currentData) { toast('불러온 데이터가 없습니다.', 'warning'); return; }
+  const fname = document.getElementById('res-file-sel').value || 'baselines_result.json';
+  const blob = new Blob([JSON.stringify(currentData, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fname;
+  a.click();
+  toast('JSON 파일 저장 완료', 'success');
+}
+
+function exportCurrentCSV() {
+  if (!currentData) { toast('불러온 데이터가 없습니다.', 'warning'); return; }
+  const rows = Object.entries(currentData)
+    .sort((a,b) => a[1].mean - b[1].mean)
+    .map(([b,v]) => [b, fmt(v.mean), fmt(v.std), fmt(v.ptj,1), fmt(v.mit,1), fmtPct(v.ari)]);
+  exportCSV(['규칙','AT 평균','AT 표준편차','납기 위반%','기계 유휴 시간','ARI'], rows, '시뮬레이션_결과.csv');
+}
+
+loadFileList();
+</script>
+{% endblock %}

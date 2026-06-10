@@ -1,0 +1,459 @@
+{% extends "base.html" %}
+{% block title %}인간 vs AI{% endblock %}
+{% block page_title %}인간 vs AI 비교{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-3">
+    <div class="wb-card">
+      <div class="wb-card-header">
+        <i class="fa fa-scale-balanced text-accent"></i>
+        <span class="wb-card-title">결과 파일 선택</span>
+      </div>
+      <div class="wb-card-subtitle mb-2">서버 저장 파일</div>
+      <div class="mb-2">
+        <label class="form-label mb-1">기본 규칙 결과</label>
+        <select id="hva-baseline" class="form-select form-select-sm"></select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label mb-1">진화 결과 (P1/P2/P3)</label>
+        <select id="hva-evo" class="form-select form-select-sm">
+          <option value="">없음</option>
+        </select>
+      </div>
+
+      <hr style="border-color:var(--border)">
+      <div class="wb-card-subtitle mb-2">로컬 파일 직접 업로드</div>
+      <div class="mb-2">
+        <label class="form-label mb-1" style="font-size:12px">기본 규칙 JSON (baselines_*.json)</label>
+        <input type="file" id="hva-local-baseline" accept=".json" class="form-control form-control-sm"
+               onchange="readLocalBaseline()">
+        <div id="hva-local-baseline-label" class="small text-muted mt-1">파일 미선택</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label mb-1" style="font-size:12px">진화 결과 JSON (evolution_*.json)</label>
+        <input type="file" id="hva-local-evo" accept=".json" class="form-control form-control-sm"
+               onchange="readLocalEvo()">
+        <div id="hva-local-evo-label" class="small text-muted mt-1">파일 미선택</div>
+      </div>
+      <div class="small text-muted mb-3" style="font-size:11px">
+        * 서버 파일과 로컬 파일 중 로컬 파일이 우선 적용됩니다.
+      </div>
+
+      <button class="btn btn-primary w-100 mb-2" onclick="buildComparison()">
+        <i class="fa fa-chart-bar me-2"></i>비교 분석
+      </button>
+      <button class="btn btn-outline-secondary w-100" onclick="generateNarrative()" id="hva-narrative-btn">
+        <i class="fa fa-file-lines me-2"></i>AI 해석 보고서 생성
+      </button>
+    </div>
+  </div>
+
+  <div class="col-lg-9">
+    <div id="hva-content" style="display:none">
+      <ul class="nav nav-tabs mb-0">
+        <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-summary">📊 요약 테이블</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-chart">📈 차트</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-code">💻 코드 분석</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-genlog">🧬 AI 생성 로그</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-narrative">📝 AI 해석 보고서</a></li>
+      </ul>
+      <div class="tab-content">
+        <!-- 요약 테이블 -->
+        <div class="tab-pane fade show active" id="tab-summary">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead><tr>
+                <th>방식</th><th>규칙 ID</th><th>유형</th>
+                <th>AT 평균</th><th>AT 표준편차</th><th>납기 위반%</th><th>ARI</th>
+                <th>변수 수</th><th>조건 수</th><th>코드 길이</th>
+              </tr></thead>
+              <tbody id="hva-table"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 차트 -->
+        <div class="tab-pane fade" id="tab-chart">
+          <div class="row g-3">
+            <div class="col-12"><div class="chart-container"><div id="chart-hva-bar" style="height:320px"></div></div></div>
+            <div class="col-md-6"><div class="chart-container"><div id="chart-hva-scatter" style="height:320px"></div></div></div>
+            <div class="col-md-6"><div class="chart-container"><div id="chart-hva-radar" style="height:320px"></div></div></div>
+          </div>
+        </div>
+
+        <!-- 코드 분석 -->
+        <div class="tab-pane fade" id="tab-code">
+          <div id="code-analysis-table"></div>
+        </div>
+
+        <!-- AI 해석 보고서 -->
+        <div class="tab-pane fade" id="tab-narrative">
+          <div class="pt-3">
+            <div id="hva-narrative-placeholder" class="text-center text-muted p-4">
+              <i class="fa fa-file-lines fa-2x mb-2" style="opacity:.3"></i>
+              <p>비교 분석 후 왼쪽의 <strong>AI 해석 보고서 생성</strong> 버튼을 클릭하세요.</p>
+            </div>
+            <div id="hva-narrative-loading" style="display:none" class="text-center text-muted p-3">
+              <i class="fa fa-spinner fa-spin me-2"></i>LLM이 분석 보고서를 작성 중...
+            </div>
+            <div id="hva-narrative-content" style="display:none; white-space:pre-wrap; line-height:1.9; font-size:14px; padding:8px 4px; color:var(--text-primary)"></div>
+            <div id="hva-narrative-actions" style="display:none" class="mt-3 d-flex gap-2 justify-content-end">
+              <button class="btn btn-sm btn-outline-secondary" onclick="downloadNarrative()">
+                <i class="fa fa-download me-1"></i>텍스트 저장
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI 생성 로그 (진화 센터와 동일한 뷰) -->
+        <div class="tab-pane fade" id="tab-genlog">
+          <div class="pt-3">
+            <div id="hva-genlog-empty" class="text-center text-muted p-4">
+              <i class="fa fa-dna fa-2x mb-2" style="opacity:.3"></i>
+              <p>진화 결과 파일을 선택하면 AI의 세대별 생성 로그가 표시됩니다.</p>
+            </div>
+            <div id="hva-genlog-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="hva-placeholder" class="text-center p-5 text-muted">
+      <i class="fa fa-scale-balanced fa-3x mb-3" style="opacity:.2"></i>
+      <p>결과 파일을 선택하고 비교 분석 버튼을 클릭하세요.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let _localBaselineData = null;
+let _localEvoData = null;
+
+function readLocalBaseline() {
+  const file = document.getElementById('hva-local-baseline').files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      _localBaselineData = JSON.parse(e.target.result);
+      document.getElementById('hva-local-baseline-label').textContent = '✓ ' + file.name;
+      document.getElementById('hva-local-baseline-label').className = 'small text-success mt-1';
+    } catch { toast('JSON 파싱 오류: 기본 규칙 파일', 'error'); }
+  };
+  reader.readAsText(file);
+}
+
+function readLocalEvo() {
+  const file = document.getElementById('hva-local-evo').files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      _localEvoData = JSON.parse(e.target.result);
+      document.getElementById('hva-local-evo-label').textContent = '✓ ' + file.name;
+      document.getElementById('hva-local-evo-label').className = 'small text-success mt-1';
+    } catch { toast('JSON 파싱 오류: 진화 결과 파일', 'error'); }
+  };
+  reader.readAsText(file);
+}
+
+const RULE_VARS = {
+  B1:  ['release_time'],
+  B2:  ['due_date'],
+  B3:  ['processing_time'],
+  B4:  ['due_date','remaining_pt','current_time'],
+  B5:  ['urgent_order_flag','due_date'],
+  B6:  ['processing_time','work_in_next_queue','due_date','remaining_pt','current_time'],
+  B7:  ['due_date','remaining_pt','current_time','processing_time'],
+  B8:  ['release_time','remaining_pt'],
+  B9:  ['machine_utilization','processing_time'],
+  B10: ['due_date','remaining_pt','current_time','processing_time','avg_processing_time'],
+};
+
+// ── narrative 관련 상태 ─────────────────────────────────────
+let _lastBaselineData = null;
+let _lastEvoData      = null;
+let _lastInstance     = '';
+let _lastScenario     = '';
+let _narrativeText    = '';
+
+async function generateNarrative() {
+  if (!_lastBaselineData) {
+    toast('먼저 비교 분석을 실행해 주세요.', 'warning'); return;
+  }
+
+  // narrative 탭으로 이동
+  document.querySelector('[href="#tab-narrative"]')?.click();
+
+  document.getElementById('hva-narrative-placeholder').style.display = 'none';
+  document.getElementById('hva-narrative-loading').style.display     = 'block';
+  document.getElementById('hva-narrative-content').style.display     = 'none';
+  document.getElementById('hva-narrative-actions').style.display     = 'none';
+
+  const r = await API.post('/api/report/narrative', {
+    baseline_data: _lastBaselineData,
+    evo_data:      _lastEvoData || null,
+    instance:      _lastInstance,
+    scenario:      _lastScenario,
+  });
+
+  document.getElementById('hva-narrative-loading').style.display = 'none';
+
+  if (!r.ok) {
+    toast(r.error || 'LLM 호출 실패', 'error');
+    document.getElementById('hva-narrative-placeholder').style.display = 'block';
+    return;
+  }
+
+  _narrativeText = r.narrative;
+  document.getElementById('hva-narrative-content').textContent = r.narrative;
+  document.getElementById('hva-narrative-content').style.display = 'block';
+  document.getElementById('hva-narrative-actions').style.display  = 'flex';
+  toast('AI 해석 보고서 생성 완료', 'success');
+}
+
+function downloadNarrative() {
+  if (!_narrativeText) return;
+  const blob = new Blob([_narrativeText], {type: 'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `FJSSP_AI해석보고서_${_lastInstance || 'result'}.txt`;
+  a.click();
+}
+
+async function loadFiles() {
+  const [br, er] = await Promise.all([
+    API.get('/api/results'),
+    API.get('/api/evolution/results'),
+  ]);
+  if (br.ok) {
+    document.getElementById('hva-baseline').innerHTML =
+      '<option value="">선택...</option>' +
+      br.data.map(r => `<option value="${r.file}">${r.file.replace('baselines_','').replace('.json','')}</option>`).join('');
+  }
+  if (er.ok) {
+    document.getElementById('hva-evo').innerHTML =
+      '<option value="">없음</option>' +
+      er.data.map(r => `<option value="${r.file}">${r.method} — ${r.instance?.toUpperCase()} / ${r.scenario}</option>`).join('');
+  }
+}
+
+function countVars(code) {
+  if (!code) return 0;
+  const varNames = ['release_time','due_date','remaining_pt','processing_time',
+    'urgent_order_flag','part_available_time','current_time','machine_id',
+    'avg_processing_time','machine_utilization','machine_workloads'];
+  return varNames.filter(v => code.includes(v)).length;
+}
+
+function countConditions(code) {
+  if (!code) return 0;
+  return (code.match(/\bif\b|\belse\b|\belif\b/g)||[]).length;
+}
+
+async function buildComparison() {
+  const bfile = document.getElementById('hva-baseline').value;
+  const efile = document.getElementById('hva-evo').value;
+
+  let baselineData, evoData = null;
+
+  // 로컬 파일 우선, 없으면 서버 파일 사용
+  if (_localBaselineData) {
+    baselineData = _localBaselineData;
+  } else {
+    if (!bfile) { toast('기본 규칙 파일을 선택하거나 로컬 JSON을 업로드해 주세요.', 'warning'); return; }
+    const bd = await API.get(`/api/results/${bfile}`);
+    if (!bd.ok) { toast(bd.error, 'error'); return; }
+    baselineData = bd.data;
+  }
+
+  if (_localEvoData) {
+    evoData = _localEvoData;
+  } else if (efile) {
+    const ed = await API.get(`/api/evolution/result/${efile}`);
+    if (ed.ok) evoData = ed.data;
+  }
+
+  const rows = [];
+  Object.entries(baselineData).sort((a,b)=>a[1].mean-b[1].mean).forEach(([bid, v]) => {
+    rows.push({
+      method:'인간 (기본 규칙)', id:bid, type:'기본 규칙',
+      at_mean:v.mean, at_std:v.std, ptj:v.ptj, ari:v.ari||0,
+      vars: (RULE_VARS[bid]||[]).length,
+      conditions: 1,
+      code_len: 100,
+      code: null,
+    });
+  });
+
+  if (evoData) {
+    const best = evoData.best_rule || {};
+    const s = evoData.summary || {};
+    rows.push({
+      method: `AI (${evoData.method || 'LLM'})`,
+      id: best.rule_id || '—',
+      type: ed.data.method,
+      at_mean: s.mean, at_std: s.std, ptj: s.ptj, ari: s.ari||0,
+      vars: countVars(best.code),
+      conditions: countConditions(best.code),
+      code_len: (best.code||'').length,
+      code: best.code,
+    });
+  }
+
+  // 보고서 생성을 위해 상태 저장
+  _lastBaselineData = baselineData;
+  _lastEvoData      = evoData;
+  _lastInstance     = document.getElementById('hva-baseline').value.replace(/^baselines_[^_]+_/, '').replace('.json', '') ||
+                      (evoData?.instance || '');
+  _lastScenario     = evoData?.scenario || 'S0';
+
+  document.getElementById('hva-placeholder').style.display = 'none';
+  document.getElementById('hva-content').style.display = 'block';
+
+  // 요약 테이블
+  document.getElementById('hva-table').innerHTML = rows.map(r => `
+    <tr class="${r.type!=='기본 규칙'?'table-active':''}">
+      <td><span class="badge ${r.type==='기본 규칙'?'badge-baseline':'badge-llm'}">${r.method}</span></td>
+      <td><strong>${r.id}</strong></td>
+      <td>${r.type}</td>
+      <td>${fmt(r.at_mean)}</td>
+      <td>${fmt(r.at_std)}</td>
+      <td>${fmt(r.ptj,1)}%</td>
+      <td class="${(r.ari||0)>0?'text-danger':'text-success'}">${fmtPct(r.ari)}</td>
+      <td>${r.vars}</td>
+      <td>${r.conditions}</td>
+      <td>${r.code_len}</td>
+    </tr>`).join('');
+
+  const labels  = rows.map(r => r.id);
+  const means   = rows.map(r => r.at_mean);
+  const stds    = rows.map(r => r.at_std);
+  const colorMap = rows.map(r => r.type==='기본 규칙' ? COLORS[0] : COLORS[2]);
+
+  // 막대 차트
+  Plotly.newPlot('chart-hva-bar', [{
+    type:'bar', x:labels, y:means,
+    error_y:{type:'data',array:stds,visible:true,color:'#8b949e'},
+    marker:{color:colorMap},
+  }], plotLayout({title:'AT 평균 — 인간 vs AI', yaxis:{title:'AT'}}));
+
+  // 산점도: 코드 길이 vs AT
+  Plotly.newPlot('chart-hva-scatter', [{
+    type:'scatter', mode:'markers+text',
+    x: rows.map(r=>r.code_len),
+    y: rows.map(r=>r.at_mean),
+    text: labels,
+    textposition:'top center',
+    marker:{size:10, color:colorMap},
+    hovertemplate:'<b>%{text}</b><br>코드 길이=%{x}<br>AT=%{y:.3f}<extra></extra>',
+  }], plotLayout({title:'코드 길이 vs AT', xaxis:{title:'코드 길이 (글자 수)'}, yaxis:{title:'AT 평균'}}));
+
+  // 레이더 차트
+  const metricLabels = ['AT 평균','AT 표준편차','납기 위반%','변수 수','조건 수'];
+  const maxVals = [
+    Math.max(...rows.map(r=>r.at_mean||0))||1,
+    Math.max(...rows.map(r=>r.at_std||0))||1,
+    Math.max(...rows.map(r=>r.ptj||0))||1,
+    Math.max(...rows.map(r=>r.vars||0))||1,
+    Math.max(...rows.map(r=>r.conditions||0))||1,
+  ];
+  const radarTraces = rows.slice(0,5).map((r, i) => ({
+    type:'scatterpolar',
+    r: [r.at_mean, r.at_std, r.ptj||0, r.vars, r.conditions].map((v,j)=>v/maxVals[j]),
+    theta: metricLabels, fill:'toself', name: r.id,
+    line:{color:COLORS[i%COLORS.length]},
+  }));
+  Plotly.newPlot('chart-hva-radar', radarTraces, plotLayout({
+    title:'다중 지표 비교 (정규화)',
+    polar:{bgcolor:'#1c2128',
+           angularaxis:{color:'#30363d'},
+           radialaxis:{color:'#30363d',gridcolor:'#30363d',range:[0,1]}},
+  }));
+
+  // 코드 분석
+  document.getElementById('code-analysis-table').innerHTML = buildTable(
+    ['규칙','유형','사용 변수 수','조건 수','코드 길이 (글자)'],
+    rows.map(r => [
+      `<span class="badge ${r.type==='기본 규칙'?'badge-baseline':'badge-llm'}">${r.id}</span>`,
+      r.type, r.vars, r.conditions, r.code_len,
+    ])
+  );
+
+  // AI 생성 로그
+  buildHvaGenLog(evoData ? (evoData.generation_log || []) : []);
+}
+
+function buildHvaGenLog(logEntries) {
+  const emptyEl = document.getElementById('hva-genlog-empty');
+  const listEl  = document.getElementById('hva-genlog-list');
+
+  if (!logEntries.length) {
+    emptyEl.style.display = 'block';
+    listEl.innerHTML = '';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  const opColors = {
+    LLM_INIT: 'var(--purple)', E1: 'var(--green)',
+    E2: 'var(--yellow)', M1: 'var(--orange)', M2: 'var(--accent)',
+  };
+
+  listEl.innerHTML = logEntries.map((e, idx) => {
+    const entered  = e.entered_pool;
+    const atText   = e.avg_at != null ? `AT = ${fmt(e.avg_at)}` : '평가 전';
+    const color    = opColors[e.operator] || 'var(--text-secondary)';
+    const code     = (e.code||'').trim();
+    const codeSnip = code.length > 400 ? code.slice(0,400)+'\n...' : code;
+    const promptSnip = (e.prompt_summary||'').slice(0, 300);
+
+    return `
+    <div class="wb-card mb-3">
+      <div class="wb-card-header" style="cursor:pointer" onclick="toggleHvaLog(${idx})">
+        <span class="badge me-2" style="background:${color}20; color:${color}; border:1px solid ${color}40">
+          ${e.iteration}세대 · ${e.operator_kr||e.operator}
+        </span>
+        <span class="wb-card-title">${e.rule_id}</span>
+        <div class="ms-auto d-flex gap-2 align-items-center">
+          ${entered
+            ? '<span class="badge badge-success">✓ 풀 진입</span>'
+            : '<span class="badge badge-failure">✗ 탈락</span>'}
+          <span class="small text-muted">${atText}</span>
+          <i class="fa fa-chevron-down small text-muted" id="hva-chev-${idx}"></i>
+        </div>
+      </div>
+      <div id="hva-log-detail-${idx}" style="display:none">
+        ${e.parents?.length ? `
+        <div class="mb-2">
+          <span class="small text-muted">부모 규칙:</span>
+          ${e.parents.map(p=>`<span class="badge badge-baseline ms-1">${p}</span>`).join('')}
+        </div>` : ''}
+        <div class="mb-2">
+          <div class="small text-muted mb-1">📝 LLM 프롬프트 요약</div>
+          <pre style="font-size:11px;color:#8b949e;background:var(--bg-surface);padding:10px;border-radius:6px;max-height:120px;overflow-y:auto;white-space:pre-wrap;margin:0">${promptSnip}</pre>
+        </div>
+        <div>
+          <div class="small text-muted mb-1">💻 생성된 규칙 코드</div>
+          <pre style="font-size:11px;color:#7ee787;background:#0a0d12;padding:10px;border-radius:6px;max-height:200px;overflow-y:auto;white-space:pre-wrap;margin:0">${codeSnip}</pre>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleHvaLog(idx) {
+  const el   = document.getElementById(`hva-log-detail-${idx}`);
+  const chev = document.getElementById(`hva-chev-${idx}`);
+  const h    = el.style.display === 'none';
+  el.style.display    = h ? 'block' : 'none';
+  chev.style.transform  = h ? 'rotate(180deg)' : 'rotate(0deg)';
+  chev.style.transition = 'transform 0.2s';
+}
+
+loadFiles();
+</script>
+{% endblock %}

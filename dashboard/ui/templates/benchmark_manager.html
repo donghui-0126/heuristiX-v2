@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}벤치마크 관리{% endblock %}
+{% block page_title %}벤치마크 관리{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- 왼쪽: 선택기 -->
+  <div class="col-lg-4">
+    <div class="wb-card">
+      <div class="wb-card-header">
+        <i class="fa fa-database text-accent"></i>
+        <span class="wb-card-title">벤치마크 선택</span>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">패밀리</label>
+        <select id="bm-family" class="form-select form-select-sm" onchange="onFamilyChange()"></select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">인스턴스</label>
+        <select id="bm-instance" class="form-select form-select-sm" onchange="loadStats()"></select>
+      </div>
+      <button class="btn btn-primary btn-sm w-100 mb-3" onclick="loadStats()">
+        <i class="fa fa-magnifying-glass me-1"></i>상세 정보 보기
+      </button>
+
+      <hr style="border-color:var(--border)">
+      <div class="wb-card-subtitle mb-2">커스텀 벤치마크 업로드 (.json)</div>
+      <input type="file" id="bm-upload" accept=".json" class="form-control form-control-sm mb-2">
+      <button class="btn btn-sm btn-outline-secondary w-100" onclick="uploadBenchmark()">
+        <i class="fa fa-upload me-1"></i>업로드
+      </button>
+      <div id="upload-status" class="small mt-2"></div>
+    </div>
+  </div>
+
+  <!-- 오른쪽: 통계 + 목록 -->
+  <div class="col-lg-8">
+    <div id="bm-stats-card" class="wb-card mb-3" style="display:none">
+      <div class="wb-card-header">
+        <i class="fa fa-chart-pie text-accent"></i>
+        <span class="wb-card-title" id="bm-title">—</span>
+        <span class="badge badge-baseline ms-auto" id="bm-family-badge"></span>
+      </div>
+      <div class="stat-grid mb-0" id="bm-stat-grid"></div>
+    </div>
+
+    <div class="wb-card" id="bm-list-card">
+      <div class="wb-card-header">
+        <i class="fa fa-list text-accent"></i>
+        <span class="wb-card-title">전체 인스턴스</span>
+        <span class="badge bg-secondary ms-auto" id="bm-count">0</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>인스턴스</th><th>작업 수</th><th>기계 수</th><th>공정 수</th><th>유연성</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="bm-table-body">
+            <tr><td colspan="6" class="text-center text-muted">패밀리를 선택하면 목록이 로드됩니다.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allInstances = {};
+
+async function loadFamilies() {
+  const d = await API.get('/api/benchmarks');
+  if (!d.ok) return;
+  allInstances = d.data;
+  const savedFamily = localStorage.getItem('fjssp_family');
+  const families = Object.keys(d.data);
+  const selFamily = families.includes(savedFamily) ? savedFamily : families[0];
+  const sel = document.getElementById('bm-family');
+  sel.innerHTML = families.map(f =>
+    `<option value="${f}"${f===selFamily?' selected':''}>${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join('');
+  onFamilyChange();
+}
+
+function onFamilyChange() {
+  const fam = document.getElementById('bm-family').value;
+  const list = allInstances[fam] || [];
+  const savedInstance = localStorage.getItem('fjssp_instance');
+  const inst = document.getElementById('bm-instance');
+  inst.innerHTML = list.map(n => `<option value="${n}"${n===savedInstance?' selected':''}>${n.toUpperCase()}</option>`).join('');
+  localStorage.setItem('fjssp_family', fam);
+  loadAllStats(fam, list);
+}
+
+async function loadAllStats(fam, names) {
+  document.getElementById('bm-count').textContent = names.length;
+  const tbody = document.getElementById('bm-table-body');
+  tbody.innerHTML = names.map(n => `
+    <tr id="row-${n}">
+      <td><strong>${n.toUpperCase()}</strong></td>
+      <td class="text-muted">…</td><td class="text-muted">…</td>
+      <td class="text-muted">…</td><td class="text-muted">…</td>
+      <td><button class="btn btn-sm btn-icon" onclick="selectInstance('${n}')">
+        <i class="fa fa-eye"></i></button></td>
+    </tr>`).join('');
+
+  for (const n of names) {
+    const d = await API.get(`/api/benchmark/${fam}/${n}`);
+    if (!d.ok) continue;
+    const s = d.data;
+    const row = document.getElementById(`row-${n}`);
+    if (!row) continue;
+    const tds = row.querySelectorAll('td');
+    tds[1].textContent = s.n_jobs;
+    tds[2].textContent = s.n_machines;
+    tds[3].textContent = s.n_operations;
+    tds[4].textContent = s.flexibility.toFixed(2);
+  }
+}
+
+async function loadStats() {
+  const fam  = document.getElementById('bm-family').value;
+  const name = document.getElementById('bm-instance').value;
+  if (!name) return;
+  const d = await API.get(`/api/benchmark/${fam}/${name}`);
+  if (!d.ok) { toast(d.error, 'error'); return; }
+  const s = d.data;
+  document.getElementById('bm-stats-card').style.display = 'block';
+  document.getElementById('bm-title').textContent = name.toUpperCase();
+  document.getElementById('bm-family-badge').textContent = fam;
+  document.getElementById('bm-stat-grid').innerHTML = [
+    ['작업 수',        s.n_jobs],
+    ['기계 수',        s.n_machines],
+    ['공정 수',        s.n_operations],
+    ['유연성 지수',    s.flexibility.toFixed(2)],
+    ['최대 공정/작업', s.max_ops_per_job],
+    ['최소 공정/작업', s.min_ops_per_job],
+  ].map(([lbl, val]) => `
+    <div class="stat-card">
+      <div class="stat-value" style="font-size:22px">${val}</div>
+      <div class="stat-label">${lbl}</div>
+    </div>`).join('');
+}
+
+function selectInstance(name) {
+  document.getElementById('bm-instance').value = name;
+  localStorage.setItem('fjssp_instance', name);
+  loadStats();
+}
+
+async function uploadBenchmark() {
+  const file = document.getElementById('bm-upload').files[0];
+  if (!file) { toast('파일을 먼저 선택해 주세요.', 'warning'); return; }
+  const fd = new FormData();
+  fd.append('file', file);
+  const r = await fetch('/api/benchmark/upload', {method:'POST', body: fd});
+  const d = await r.json();
+  const status = document.getElementById('upload-status');
+  if (d.ok) {
+    status.className = 'text-success small mt-2';
+    status.textContent = `✓ 업로드 완료: ${d.data.name} (작업 ${d.data.n_jobs}개, 기계 ${d.data.n_machines}대)`;
+    toast('벤치마크 업로드 완료!', 'success');
+    loadFamilies();
+  } else {
+    status.className = 'text-danger small mt-2';
+    status.textContent = '✗ ' + d.error;
+  }
+}
+
+loadFamilies();
+</script>
+{% endblock %}

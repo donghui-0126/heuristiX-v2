@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}유사도 분석{% endblock %}
+{% block page_title %}유사도 분석{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-3">
+    <div class="wb-card">
+      <div class="wb-card-header">
+        <i class="fa fa-circle-nodes text-accent"></i>
+        <span class="wb-card-title">분석 설정</span>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">진화 결과 포함 (선택)</label>
+        <select id="sa-evo-file" class="form-select form-select-sm">
+          <option value="">기본 규칙만 비교</option>
+        </select>
+      </div>
+      <button class="btn btn-primary w-100 mb-2" onclick="runAnalysis()">
+        <i class="fa fa-magnifying-glass me-2"></i>유사도 분석 실행
+      </button>
+      <div class="small text-muted">
+        Python 코드 토큰에 대한 TF-IDF 코사인 유사도를 계산합니다.
+        PCA 및 t-SNE로 2D 시각화를 수행합니다.
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-9">
+    <div id="sa-loading" class="text-center text-muted p-5" style="display:none">
+      <i class="fa fa-spinner fa-spin fa-2x mb-3"></i><br>유사도 계산 중...
+    </div>
+    <div id="sa-results" style="display:none">
+      <ul class="nav nav-tabs mb-0">
+        <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-heatmap">🔥 유사도 히트맵</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-pca">📐 PCA</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-tsne">🧭 t-SNE</a></li>
+      </ul>
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="tab-heatmap">
+          <div id="chart-sim-heatmap" style="height:520px"></div>
+        </div>
+        <div class="tab-pane fade" id="tab-pca">
+          <div id="chart-pca" style="height:500px"></div>
+        </div>
+        <div class="tab-pane fade" id="tab-tsne">
+          <div id="chart-tsne" style="height:500px"></div>
+        </div>
+      </div>
+    </div>
+    <div id="sa-placeholder" class="text-center p-5 text-muted">
+      <i class="fa fa-circle-nodes fa-3x mb-3" style="opacity:.2"></i>
+      <p>분석 실행 버튼을 클릭하면 규칙 간 유사도가 계산됩니다.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadEvoFiles() {
+  const d = await API.get('/api/evolution/results');
+  if (!d.ok) return;
+  const sel = document.getElementById('sa-evo-file');
+  d.data.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.file;
+    opt.textContent = `${r.method} — ${r.instance?.toUpperCase()} / ${r.scenario}`;
+    sel.appendChild(opt);
+  });
+}
+
+async function runAnalysis() {
+  const evoFile = document.getElementById('sa-evo-file').value;
+  document.getElementById('sa-placeholder').style.display = 'none';
+  document.getElementById('sa-results').style.display = 'none';
+  document.getElementById('sa-loading').style.display = 'block';
+
+  const body = {};
+  if (evoFile) body.evolution_file = evoFile;
+
+  const d = await API.post('/api/similarity', body);
+  document.getElementById('sa-loading').style.display = 'none';
+
+  if (!d.ok) { toast(d.error, 'error'); return; }
+  document.getElementById('sa-results').style.display = 'block';
+
+  const {ids, similarity_matrix, pca, tsne} = d.data;
+
+  Plotly.newPlot('chart-sim-heatmap', [{
+    type:'heatmap', z:similarity_matrix, x:ids, y:ids,
+    colorscale:[
+      [0,'#161b22'],[0.5,'#1f3a5f'],[1,'#4493f8']
+    ],
+    text: similarity_matrix.map(row => row.map(v => v.toFixed(2))),
+    texttemplate:'%{text}',
+    hovertemplate:'%{y} × %{x}<br>유사도: %{z:.3f}<extra></extra>',
+    showscale:true,
+  }], plotLayout({
+    title:'코사인 유사도 행렬 (TF-IDF, 코드 토큰 기반)',
+    margin:{t:50,r:80,b:120,l:80},
+    xaxis:{tickangle:-45},
+  }));
+
+  const pcaColors = ids.map((id,i) =>
+    id.startsWith('B') ? COLORS[0] : COLORS[i%COLORS.length]);
+
+  Plotly.newPlot('chart-pca', [{
+    type:'scatter', mode:'markers+text',
+    x: pca.map(p=>p[0]), y: pca.map(p=>p[1]),
+    text: ids, textposition:'top center',
+    textfont:{size:10, color:'#8b949e'},
+    marker:{size:12, color:pcaColors, line:{color:'#0d1117',width:1}},
+    hovertemplate:'<b>%{text}</b><br>PC1=%{x:.3f}<br>PC2=%{y:.3f}<extra></extra>',
+  }], plotLayout({
+    title:'PCA — 2D 규칙 공간 투영',
+    xaxis:{title:'주성분 1 (PC1)'},
+    yaxis:{title:'주성분 2 (PC2)'},
+  }));
+
+  Plotly.newPlot('chart-tsne', [{
+    type:'scatter', mode:'markers+text',
+    x: tsne.map(p=>p[0]), y: tsne.map(p=>p[1]),
+    text: ids, textposition:'top center',
+    textfont:{size:10, color:'#8b949e'},
+    marker:{size:12, color:pcaColors, line:{color:'#0d1117',width:1}},
+    hovertemplate:'<b>%{text}</b><br>x=%{x:.1f}<br>y=%{y:.1f}<extra></extra>',
+  }], plotLayout({title:'t-SNE — 2D 규칙 클러스터 시각화'}));
+}
+
+loadEvoFiles();
+</script>
+{% endblock %}

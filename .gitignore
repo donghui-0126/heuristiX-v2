@@ -34,3 +34,9 @@ hub/workspace/*/
 *.pdf
 !docs/*.pdf
 
+
+# Dashboard (Flask workbench)
+# results/ = runtime outputs (seeded from seed_results/); fjsp-instances = external clone
+dashboard/.env
+dashboard/results/
+dashboard/fjsp-instances/

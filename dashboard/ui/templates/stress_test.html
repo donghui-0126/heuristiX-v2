@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}스트레스 테스트{% endblock %}
+{% block page_title %}스트레스 테스트{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-3">
+    <div class="wb-card">
+      <div class="wb-card-header">
+        <i class="fa fa-fire-flame-curved text-accent"></i>
+        <span class="wb-card-title">스트레스 테스트 설정</span>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">패밀리</label>
+        <select id="st-family" class="form-select form-select-sm" onchange="onFamilyChange()"></select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">인스턴스</label>
+        <select id="st-instance" class="form-select form-select-sm" onchange="saveSelection()"></select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">테스트할 규칙 선택</label>
+        <div id="st-rules" class="d-flex flex-wrap gap-1"></div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">시나리오당 시드 수: <strong id="st-seeds-val">30</strong></label>
+        <input type="range" class="form-range" id="st-seeds" min="5" max="50" value="30"
+               oninput="document.getElementById('st-seeds-val').textContent=this.value">
+      </div>
+      <button class="btn btn-primary w-100" onclick="runStressTest()">
+        <i class="fa fa-play me-2"></i>스트레스 테스트 실행
+      </button>
+      <div class="small text-muted mt-2">
+        7가지 시나리오 동시 테스트: S0, S1×3, S2×3
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-9">
+    <div id="st-progress" style="display:none" class="mb-3"></div>
+    <div id="st-result" style="display:none">
+      <div class="wb-card mb-3">
+        <div class="wb-card-header">
+          <i class="fa fa-table-cells text-accent"></i>
+          <span class="wb-card-title" id="st-title">스트레스 테스트 히트맵</span>
+          <button class="btn btn-sm btn-icon ms-auto" onclick="exportStressCSV()">
+            <i class="fa fa-download me-1"></i>CSV
+          </button>
+        </div>
+        <div id="chart-heatmap" style="height:450px"></div>
+      </div>
+
+      <div class="wb-card">
+        <div class="wb-card-header">
+          <i class="fa fa-chart-bar text-accent"></i>
+          <span class="wb-card-title">시나리오별 AT 비교</span>
+        </div>
+        <div id="chart-stress-line" style="height:350px"></div>
+      </div>
+    </div>
+
+    <!-- 과거 결과 불러오기 -->
+    <div class="wb-card mt-3" id="st-past-card">
+      <div class="wb-card-header">
+        <i class="fa fa-clock-rotate-left text-accent"></i>
+        <span class="wb-card-title">과거 결과 불러오기</span>
+      </div>
+      <select id="st-past-sel" class="form-select form-select-sm mb-2" onchange="loadPastStress(this.value)">
+        <option value="">선택...</option>
+      </select>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const RULE_IDS = ['B1','B2','B3','B4','B5','B6','B7','B8','B9','B10'];
+let stressData = null;
+
+let _allBenchmarks = {};
+
+function saveSelection() {
+  const f = document.getElementById('st-family').value;
+  const i = document.getElementById('st-instance').value;
+  if (f) localStorage.setItem('fjssp_family', f);
+  if (i) localStorage.setItem('fjssp_instance', i);
+}
+
+function onFamilyChange() {
+  const family = document.getElementById('st-family').value;
+  const instances = _allBenchmarks[family] || [];
+  const saved = localStorage.getItem('fjssp_instance');
+  document.getElementById('st-instance').innerHTML =
+    instances.map(n=>`<option value="${n}"${n===saved?' selected':''}>${n.toUpperCase()}</option>`).join('');
+  saveSelection();
+}
+
+async function init() {
+  const d = await API.get('/api/benchmarks');
+  if (d.ok) {
+    _allBenchmarks = d.data;
+    const savedFamily = localStorage.getItem('fjssp_family');
+    const families = Object.keys(d.data);
+    const selFamily = families.includes(savedFamily) ? savedFamily : families[0];
+    document.getElementById('st-family').innerHTML =
+      families.map(f=>`<option value="${f}"${f===selFamily?' selected':''}>${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join('');
+    onFamilyChange();
+  }
+
+  document.getElementById('st-rules').innerHTML = RULE_IDS.map(bid => `
+    <label class="d-flex align-items-center gap-1 me-1 mb-1" style="cursor:pointer">
+      <input type="checkbox" class="form-check-input rule-check" value="${bid}" checked>
+      <span class="badge badge-baseline">${bid}</span>
+    </label>`).join('');
+
+  const pr = await API.get('/api/stress-test/results');
+  if (pr.ok && pr.data.length) {
+    document.getElementById('st-past-sel').innerHTML =
+      '<option value="">선택...</option>' +
+      pr.data.map((r,i) => `<option value="${i}">${r.file.replace('stress_','').replace('.json','')}</option>`).join('');
+    document.getElementById('st-past-card').style.display = 'block';
+    window._pastStressData = pr.data;
+    loadPastStressData(pr.data[0].data);
+  }
+}
+
+function loadPastStress(idx) {
+  if (!idx && idx !== 0) return;
+  const item = window._pastStressData?.[parseInt(idx)];
+  if (item) loadPastStressData(item.data);
+}
+
+function loadPastStressData(data) {
+  stressData = data;
+  document.getElementById('st-result').style.display = 'block';
+  document.getElementById('st-title').textContent =
+    `스트레스 테스트 — ${(data.instance||'').toUpperCase()}`;
+  drawHeatmap(data);
+  drawLineChart(data);
+}
+
+async function runStressTest() {
+  const rules = [...document.querySelectorAll('.rule-check:checked')].map(c => c.value);
+  if (!rules.length) { toast('최소 한 개의 규칙을 선택해 주세요.', 'warning'); return; }
+  const body = {
+    instance: document.getElementById('st-instance').value,
+    family:   document.getElementById('st-family').value,
+    rules,
+    n_seeds: parseInt(document.getElementById('st-seeds').value),
+  };
+
+  const progDiv = document.getElementById('st-progress');
+  progDiv.style.display = 'block';
+  const prog = makeProgressCard(progDiv, `${body.instance.toUpperCase()} 스트레스 테스트 실행 중...`);
+  setStatus('스트레스 테스트 중...', 'warning');
+
+  const res = await API.post('/api/stress-test/run', body);
+  if (!res.ok) { toast(res.error, 'error'); return; }
+
+  streamTask(res.task_id, {
+    onLog: msg => prog.appendLog(msg),
+    onProgress: p => prog.setProgress(p),
+    onDone: result => {
+      setStatus('준비', 'success');
+      toast('스트레스 테스트 완료!', 'success');
+      stressData = result;
+      document.getElementById('st-result').style.display = 'block';
+      document.getElementById('st-title').textContent =
+        `스트레스 테스트 — ${result.instance?.toUpperCase()}`;
+      drawHeatmap(result);
+      drawLineChart(result);
+    },
+    onError: e => { setStatus('오류','danger'); toast(e,'error'); },
+  });
+}
+
+function drawHeatmap(data) {
+  const matrix = data.matrix || {};
+  const scenarios = data.scenarios || [];
+  const rules = Object.keys(matrix);
+
+  const z = rules.map(r => scenarios.map(s => matrix[r]?.[s] ?? null));
+
+  Plotly.newPlot('chart-heatmap', [{
+    type:'heatmap', z, x:scenarios, y:rules,
+    colorscale:[
+      [0,   '#1a3a26'],
+      [0.5, '#d29922'],
+      [1,   '#6b2020'],
+    ],
+    text: z.map(row => row.map(v => v != null ? v.toFixed(2) : '—')),
+    texttemplate:'%{text}',
+    hovertemplate:'규칙: %{y}<br>시나리오: %{x}<br>AT: %{z:.3f}<extra></extra>',
+    showscale:true,
+    colorbar:{tickfont:{color:'#8b949e'}, title:{text:'AT',font:{color:'#8b949e'}}},
+  }], plotLayout({
+    title:'평균 납기 지연 히트맵 (낮을수록 좋음)',
+    xaxis:{title:'시나리오'},
+    yaxis:{title:'규칙', tickfont:{size:11}},
+    margin:{t:50, r:80, b:70, l:80},
+  }));
+}
+
+function drawLineChart(data) {
+  const matrix = data.matrix || {};
+  const scenarios = data.scenarios || [];
+  const traces = Object.entries(matrix).map(([bid, scens], i) => ({
+    type:'scatter', mode:'lines+markers',
+    x: scenarios,
+    y: scenarios.map(s => scens[s]),
+    name: bid,
+    line:{color: COLORS[i%COLORS.length]},
+    marker:{size:7, color: COLORS[i%COLORS.length]},
+  }));
+  Plotly.newPlot('chart-stress-line', traces,
+    plotLayout({title:'시나리오별 AT 변화', xaxis:{title:'시나리오'}, yaxis:{title:'AT'}}));
+}
+
+function exportStressCSV() {
+  if (!stressData) return;
+  const matrix = stressData.matrix || {};
+  const scenarios = stressData.scenarios || [];
+  const rows = Object.entries(matrix).map(([bid, s]) =>
+    [bid, ...scenarios.map(sc => s[sc]?.toFixed(3)||'—')]);
+  exportCSV(['규칙',...scenarios], rows, '스트레스_테스트.csv');
+}
+
+init();
+</script>
+{% endblock %}

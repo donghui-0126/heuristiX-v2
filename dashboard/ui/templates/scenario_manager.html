@@ -1,0 +1,628 @@
+{% extends "base.html" %}
+{% block title %}시나리오 설정 및 실험{% endblock %}
+{% block page_title %}시나리오 설정 및 실험{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+  <!-- ── 왼쪽: 설정 패널 ── -->
+  <div class="col-lg-4">
+
+    <!-- 기본 설정 -->
+    <div class="wb-card mb-3">
+      <div class="wb-card-header">
+        <i class="fa fa-database text-accent"></i>
+        <span class="wb-card-title">① 벤치마크 선택</span>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">패밀리</label>
+        <select id="sm-family" class="form-select form-select-sm" onchange="loadInstances()"></select>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">인스턴스</label>
+        <select id="sm-instance" class="form-select form-select-sm" onchange="onInstanceChange()"></select>
+      </div>
+      <div id="inst-params" class="small text-muted mt-1" style="display:none">
+        <i class="fa fa-circle-info me-1"></i>
+        T_est: <strong id="inst-test">—</strong> &nbsp;|&nbsp;
+        평균 작업 처리량: <strong id="inst-avgpt">—</strong>
+      </div>
+    </div>
+
+    <!-- 시나리오 선택 -->
+    <div class="wb-card mb-3">
+      <div class="wb-card-header">
+        <i class="fa fa-bolt text-accent"></i>
+        <span class="wb-card-title">② 시나리오 및 교란 설정</span>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">시나리오 유형</label>
+        <select id="sm-scenario" class="form-select form-select-sm" onchange="updateScenarioPanel()">
+          <option value="S0">S0 — 정상 운영 (교란 없음)</option>
+          <option value="S1">S1 — 부품 지연 (Part Delay)</option>
+          <option value="S2">S2 — 긴급 주문 (Urgent Order)</option>
+        </select>
+      </div>
+
+      <!-- DDT -->
+      <div class="mb-2">
+        <label class="form-label">납기 계수 (DDT): <strong id="sm-ddt-val">1.5</strong></label>
+        <input type="range" class="form-range" id="sm-ddt" min="0.5" max="3.0" step="0.1" value="1.5"
+               oninput="document.getElementById('sm-ddt-val').textContent=parseFloat(this.value).toFixed(1); updateConfigSummary()">
+        <div class="form-text text-muted">d_j = release_time + DDT × Σmin_pt. 낮을수록 납기가 촉박합니다.</div>
+      </div>
+
+      <!-- 시드 수 -->
+      <div class="mb-2">
+        <label class="form-label">평가 시드 수: <strong id="sm-seeds-val">50</strong></label>
+        <input type="range" class="form-range" id="sm-seeds" min="5" max="200" step="5" value="50"
+               oninput="document.getElementById('sm-seeds-val').textContent=this.value">
+      </div>
+    </div>
+
+    <!-- S0: 안내 -->
+    <div id="panel-s0" class="wb-card mb-3">
+      <div class="wb-card-header">
+        <i class="fa fa-check-circle text-success"></i>
+        <span class="wb-card-title">S0 — 정상 운영</span>
+      </div>
+      <p class="small text-muted mb-0">외부 교란이 없는 기본 상태입니다. 추가 설정 없이 실행 가능합니다.</p>
+    </div>
+
+    <!-- S1: 부품 지연 -->
+    <div id="panel-s1" class="wb-card mb-3" style="display:none">
+      <div class="wb-card-header">
+        <i class="fa fa-truck-ramp-box text-yellow"></i>
+        <span class="wb-card-title">S1 — 부품 지연 설정</span>
+      </div>
+
+      <label class="form-label">영향 비율 (affected_ratio): <strong id="s1-ratio-val">20%</strong></label>
+      <input type="range" class="form-range mb-1" id="s1-ratio" min="1" max="100" step="1" value="20"
+             oninput="document.getElementById('s1-ratio-val').textContent=this.value+'%'; updateConfigSummary()">
+      <div class="form-text text-muted mb-3">전체 작업 중 부품 지연 영향을 받는 비율.</div>
+
+      <!-- 지연 입력 방식 전환 -->
+      <div class="d-flex gap-2 mb-2">
+        <button id="btn-k-mode" class="btn btn-sm btn-primary" onclick="setDelayMode('k')">배수(k) 입력</button>
+        <button id="btn-time-mode" class="btn btn-sm btn-outline-secondary" onclick="setDelayMode('time')">시간 직접 입력</button>
+      </div>
+
+      <!-- 배수 모드 -->
+      <div id="delay-k-panel">
+        <label class="form-label">지연 배수 (delay_k): <strong id="s1-k-val">1.0</strong></label>
+        <input type="range" class="form-range mb-1" id="s1-k" min="0.1" max="5.0" step="0.1" value="1.0"
+               oninput="document.getElementById('s1-k-val').textContent=parseFloat(this.value).toFixed(1); syncKToTime(); updateConfigSummary()">
+        <div class="form-text text-muted" id="s1-k-hint">지연량 = 평균 작업 처리량 × k</div>
+      </div>
+
+      <!-- 시간 입력 모드 -->
+      <div id="delay-time-panel" style="display:none">
+        <label class="form-label">지연 시간</label>
+        <div class="d-flex gap-2 align-items-center mb-1">
+          <input type="number" id="s1-delay-hours" class="form-control form-control-sm"
+                 style="width:90px" min="0.5" max="999" step="0.5" value="1"
+                 oninput="syncTimeToK()">
+          <select id="s1-delay-unit" class="form-select form-select-sm" style="width:100px" onchange="syncTimeToK()">
+            <option value="1">분</option>
+            <option value="60" selected>시간</option>
+            <option value="480">교대(8h)</option>
+          </select>
+          <span class="small text-muted" id="s1-time-hint">→ k = 1.00</span>
+        </div>
+        <div class="form-text text-muted">실제 지연 시간을 직접 입력합니다 (1 단위 = 설정의 시간 단위).</div>
+      </div>
+
+      <hr style="border-color:var(--border); margin:12px 0">
+      <div class="row g-2 mb-1">
+        <div class="col">
+          <label class="form-label small">트리거 시점 하한: <strong id="s1-tmin-val">0.10</strong>×T_est</label>
+          <input type="range" class="form-range" id="s1-tmin" min="0.0" max="0.8" step="0.05" value="0.1"
+                 oninput="syncTiming('s1'); updateConfigSummary()">
+        </div>
+        <div class="col">
+          <label class="form-label small">트리거 시점 상한: <strong id="s1-tmax-val">0.30</strong>×T_est</label>
+          <input type="range" class="form-range" id="s1-tmax" min="0.05" max="0.95" step="0.05" value="0.3"
+                 oninput="syncTiming('s1'); updateConfigSummary()">
+        </div>
+      </div>
+      <div class="form-text text-muted">부품 지연 이벤트 발생 시점 범위. T_est = FIFO 기준 예상 완료 시간.</div>
+    </div>
+
+    <!-- S2: 긴급 주문 -->
+    <div id="panel-s2" class="wb-card mb-3" style="display:none">
+      <div class="wb-card-header">
+        <i class="fa fa-circle-exclamation text-danger"></i>
+        <span class="wb-card-title">S2 — 긴급 주문 설정</span>
+      </div>
+
+      <label class="form-label">납기 계수 (due_date_factor): <strong id="s2-ddf-val">0.5</strong></label>
+      <input type="range" class="form-range mb-1" id="s2-ddf" min="0.1" max="3.0" step="0.1" value="0.5"
+             oninput="document.getElementById('s2-ddf-val').textContent=parseFloat(this.value).toFixed(1); updateConfigSummary()">
+      <div class="form-text text-muted mb-3">긴급 작업 납기 = 도착 시점 + factor × avg_remaining_min_pt. 낮을수록 촉박.</div>
+
+      <label class="form-label">긴급 주문 수: <strong id="s2-nurge-val">1</strong>건</label>
+      <input type="range" class="form-range mb-1" id="s2-nurge" min="1" max="5" step="1" value="1"
+             oninput="document.getElementById('s2-nurge-val').textContent=this.value+'건'; updateConfigSummary()">
+      <div class="form-text text-muted mb-3">시뮬레이션 중 삽입되는 긴급 작업 수.</div>
+
+      <div class="row g-2 mb-1">
+        <div class="col">
+          <label class="form-label small">도착 시점 하한: <strong id="s2-amin-val">0.20</strong>×T_est</label>
+          <input type="range" class="form-range" id="s2-amin" min="0.0" max="0.8" step="0.05" value="0.2"
+                 oninput="syncTiming('s2'); updateConfigSummary()">
+        </div>
+        <div class="col">
+          <label class="form-label small">도착 시점 상한: <strong id="s2-amax-val">0.50</strong>×T_est</label>
+          <input type="range" class="form-range" id="s2-amax" min="0.05" max="0.95" step="0.05" value="0.5"
+                 oninput="syncTiming('s2'); updateConfigSummary()">
+        </div>
+      </div>
+
+      <!-- S2 도착 시점 절대 시간 안내 -->
+      <div id="s2-time-hint" class="small text-muted mt-1" style="display:none">
+        <i class="fa fa-clock me-1"></i>
+        도착 예상 범위: <strong id="s2-time-range">—</strong>
+      </div>
+    </div>
+
+    <!-- 실행 버튼 -->
+    <div class="wb-card">
+      <div class="wb-card-header">
+        <i class="fa fa-play text-accent"></i>
+        <span class="wb-card-title">③ 실험 실행</span>
+      </div>
+      <button class="btn btn-primary w-100 mb-2" onclick="runExperiment()">
+        <i class="fa fa-play me-2"></i>기본 규칙 평가 (B1~B10)
+      </button>
+      <div class="row g-2">
+        <div class="col">
+          <button class="btn btn-sm btn-outline-secondary w-100" onclick="runEvolution('P2')">
+            <i class="fa fa-dna me-1"></i>P2 AI 진화
+          </button>
+        </div>
+        <div class="col">
+          <button class="btn btn-sm btn-outline-secondary w-100" onclick="runEvolution('P3')">
+            <i class="fa fa-brain me-1"></i>P3 + 메모리
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 오른쪽: 결과 + 권고 ── -->
+  <div class="col-lg-8">
+    <div id="sm-progress" style="display:none" class="mb-3"></div>
+
+    <!-- 현재 설정 요약 -->
+    <div class="wb-card mb-3" id="config-summary">
+      <div class="wb-card-header">
+        <i class="fa fa-circle-info text-accent"></i>
+        <span class="wb-card-title">현재 시나리오 설정 요약</span>
+      </div>
+      <div id="config-desc" class="small text-muted">설정값을 조정하면 여기에 반영됩니다.</div>
+    </div>
+
+    <!-- 결과 -->
+    <div id="sm-result" style="display:none">
+      <div class="wb-card mb-3">
+        <div class="wb-card-header">
+          <i class="fa fa-table text-accent"></i>
+          <span class="wb-card-title" id="res-title">평가 결과</span>
+          <button class="btn btn-sm btn-icon ms-auto" onclick="exportResultCSV()">
+            <i class="fa fa-download me-1"></i>CSV
+          </button>
+        </div>
+        <div class="table-responsive" id="res-table"></div>
+      </div>
+
+      <div class="chart-container mb-3">
+        <div id="chart-at-bar" style="height:300px"></div>
+      </div>
+
+      <!-- 추가 지표 차트 -->
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <div class="chart-container">
+            <div id="chart-ptj" style="height:240px"></div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="chart-container">
+            <div id="chart-makespan" style="height:240px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI 조치 권고 패널 -->
+      <div id="rec-panel" class="wb-card mb-3" style="display:none">
+        <div class="wb-card-header">
+          <i class="fa fa-lightbulb text-yellow"></i>
+          <span class="wb-card-title">AI 조치 권고</span>
+          <button class="btn btn-sm btn-icon ms-auto" onclick="loadRecommendations()" title="새로고침">
+            <i class="fa fa-refresh"></i>
+          </button>
+        </div>
+        <div id="rec-list"></div>
+      </div>
+
+      <!-- 다음 단계 CTA -->
+      <div class="wb-card" id="next-step-card" style="display:none">
+        <div class="wb-card-header">
+          <i class="fa fa-arrow-right text-accent"></i>
+          <span class="wb-card-title">다음 단계</span>
+        </div>
+        <div class="row g-2">
+          <div class="col-md-4">
+            <a href="/simulation-results" class="btn btn-outline-secondary w-100 d-flex flex-column align-items-center py-3">
+              <i class="fa fa-chart-bar fa-2x mb-2"></i>
+              <span class="fw-bold">결과 상세 분석</span>
+              <small class="text-muted mt-1">저장된 모든 실험 결과 비교</small>
+            </a>
+          </div>
+          <div class="col-md-4">
+            <a href="/evolution-center" class="btn btn-primary w-100 d-flex flex-column align-items-center py-3">
+              <i class="fa fa-dna fa-2x mb-2"></i>
+              <span class="fw-bold">AI 규칙 진화</span>
+              <small class="mt-1">P1/P2/P3 방식으로 최적 규칙 생성</small>
+            </a>
+          </div>
+          <div class="col-md-4">
+            <a href="/stress-test" class="btn btn-outline-secondary w-100 d-flex flex-column align-items-center py-3">
+              <i class="fa fa-fire-flame-curved fa-2x mb-2"></i>
+              <span class="fw-bold">스트레스 테스트</span>
+              <small class="text-muted mt-1">다양한 시나리오 내구성 검증</small>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let lastResultData = null;
+let instParams = null;   // {t_est, avg_min_pt_per_job}
+let delayMode = 'k';     // 'k' | 'time'
+const TIME_UNIT = {{ _settings.get('time_unit_minutes', 1) }};  // 1 unit = N minutes
+
+// ── 인스턴스 변경 시 파라미터 로드 ──────────────────────────────
+async function onInstanceChange() {
+  const fam  = document.getElementById('sm-family').value;
+  const name = document.getElementById('sm-instance').value;
+  if (!name) return;
+  const d = await API.get(`/api/benchmark/${fam}/${name}/params`);
+  if (d.ok) {
+    instParams = d.data;
+    document.getElementById('inst-test').textContent = fmt(d.data.t_est);
+    document.getElementById('inst-avgpt').textContent = fmt(d.data.avg_min_pt_per_job);
+    document.getElementById('inst-params').style.display = 'block';
+    document.getElementById('s1-k-hint').textContent =
+      `지연량 ≈ ${fmt(d.data.avg_min_pt_per_job)} × k 시뮬레이션 단위`;
+    syncKToTime();
+    updateS2TimeHint();
+  }
+  updateConfigSummary();
+}
+
+// ── 지연 입력 모드 전환 ──────────────────────────────────────────
+function setDelayMode(mode) {
+  delayMode = mode;
+  document.getElementById('btn-k-mode').className =
+    mode === 'k' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-secondary';
+  document.getElementById('btn-time-mode').className =
+    mode === 'time' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-secondary';
+  document.getElementById('delay-k-panel').style.display   = mode === 'k'    ? 'block' : 'none';
+  document.getElementById('delay-time-panel').style.display = mode === 'time' ? 'block' : 'none';
+}
+
+// ── k ↔ 시간 변환 ───────────────────────────────────────────────
+function syncKToTime() {
+  if (!instParams) return;
+  const k      = parseFloat(document.getElementById('s1-k').value);
+  const unitFactor = parseInt(document.getElementById('s1-delay-unit').value);
+  const delayUnits = k * instParams.avg_min_pt_per_job;
+  const delayInUnit = delayUnits / (unitFactor / TIME_UNIT);
+  document.getElementById('s1-delay-hours').value = delayInUnit.toFixed(1);
+  document.getElementById('s1-time-hint').textContent = `→ k = ${k.toFixed(2)}`;
+  updateConfigSummary();
+}
+
+function syncTimeToK() {
+  if (!instParams || instParams.avg_min_pt_per_job <= 0) return;
+  const hours      = parseFloat(document.getElementById('s1-delay-hours').value) || 0;
+  const unitFactor = parseInt(document.getElementById('s1-delay-unit').value);
+  const delayUnits = hours * (unitFactor / TIME_UNIT);
+  const k = delayUnits / instParams.avg_min_pt_per_job;
+  const clampedK = Math.min(5.0, Math.max(0.1, k));
+  document.getElementById('s1-k').value = clampedK.toFixed(1);
+  document.getElementById('s1-k-val').textContent = clampedK.toFixed(1);
+  document.getElementById('s1-time-hint').textContent = `→ k = ${clampedK.toFixed(2)}`;
+  updateConfigSummary();
+}
+
+// ── S2 절대 시간 힌트 ────────────────────────────────────────────
+function updateS2TimeHint() {
+  if (!instParams) return;
+  const amin = parseFloat(document.getElementById('s2-amin').value);
+  const amax = parseFloat(document.getElementById('s2-amax').value);
+  const tMin = (amin * instParams.t_est / TIME_UNIT).toFixed(0);
+  const tMax = (amax * instParams.t_est / TIME_UNIT).toFixed(0);
+  const unitName = TIME_UNIT === 1 ? '분' : `단위`;
+  document.getElementById('s2-time-range').textContent =
+    `${tMin} ~ ${tMax} ${unitName} 후`;
+  document.getElementById('s2-time-hint').style.display = 'block';
+}
+
+// ── 타이밍 슬라이더 동기화 ──────────────────────────────────────
+function syncTiming(prefix) {
+  if (prefix === 's1') {
+    const mn = parseFloat(document.getElementById('s1-tmin').value);
+    const mx = parseFloat(document.getElementById('s1-tmax').value);
+    document.getElementById('s1-tmin-val').textContent = mn.toFixed(2);
+    document.getElementById('s1-tmax-val').textContent = mx.toFixed(2);
+    if (mn >= mx) document.getElementById('s1-tmax').value = Math.min(0.95, mn + 0.05);
+  }
+  if (prefix === 's2') {
+    const mn = parseFloat(document.getElementById('s2-amin').value);
+    const mx = parseFloat(document.getElementById('s2-amax').value);
+    document.getElementById('s2-amin-val').textContent = mn.toFixed(2);
+    document.getElementById('s2-amax-val').textContent = mx.toFixed(2);
+    if (mn >= mx) document.getElementById('s2-amax').value = Math.min(0.95, mn + 0.05);
+    updateS2TimeHint();
+  }
+}
+
+// ── 시나리오 패널 전환 ───────────────────────────────────────────
+function updateScenarioPanel() {
+  const s = document.getElementById('sm-scenario').value;
+  document.getElementById('panel-s0').style.display = s === 'S0' ? 'block' : 'none';
+  document.getElementById('panel-s1').style.display = s === 'S1' ? 'block' : 'none';
+  document.getElementById('panel-s2').style.display = s === 'S2' ? 'block' : 'none';
+  updateConfigSummary();
+}
+
+// ── 설정 요약 텍스트 ─────────────────────────────────────────────
+function updateConfigSummary() {
+  const s   = document.getElementById('sm-scenario').value;
+  const ddt = parseFloat(document.getElementById('sm-ddt').value).toFixed(1);
+  let desc  = '';
+  if (s === 'S0') {
+    desc = `✅ <strong>S0 정상 운영</strong> — 외부 교란 없음 · DDT = ${ddt}`;
+  } else if (s === 'S1') {
+    const ratio = document.getElementById('s1-ratio').value;
+    const k     = parseFloat(document.getElementById('s1-k').value).toFixed(1);
+    const tmin  = parseFloat(document.getElementById('s1-tmin').value).toFixed(2);
+    const tmax  = parseFloat(document.getElementById('s1-tmax').value).toFixed(2);
+    const delayHint = instParams
+      ? ` (≈ ${(k * instParams.avg_min_pt_per_job / TIME_UNIT).toFixed(0)} 분)`
+      : '';
+    desc = `⚠️ <strong>S1 부품 지연</strong> — 영향 비율: <strong>${ratio}%</strong>, ` +
+           `지연 배수: <strong>k=${k}</strong>${delayHint}, ` +
+           `트리거: <strong>[${tmin}~${tmax}]×T_est</strong> · DDT=${ddt}`;
+  } else if (s === 'S2') {
+    const ddf   = parseFloat(document.getElementById('s2-ddf').value).toFixed(1);
+    const nurge = document.getElementById('s2-nurge').value;
+    const amin  = parseFloat(document.getElementById('s2-amin').value).toFixed(2);
+    const amax  = parseFloat(document.getElementById('s2-amax').value).toFixed(2);
+    desc = `🚨 <strong>S2 긴급 주문</strong> — 긴급 작업 수: <strong>${nurge}건</strong>, ` +
+           `납기 계수: <strong>${ddf}</strong>, ` +
+           `도착 시점: <strong>[${amin}~${amax}]×T_est</strong> · DDT=${ddt}`;
+  }
+  document.getElementById('config-desc').innerHTML = desc;
+}
+
+// ── 벤치마크 로드 ────────────────────────────────────────────────
+async function loadInstances() {
+  const fam = document.getElementById('sm-family').value;
+  const d = await API.get('/api/benchmarks');
+  if (!d.ok) return;
+  const list = d.data[fam] || [];
+  document.getElementById('sm-instance').innerHTML =
+    list.map(n => `<option value="${n}">${n.toUpperCase()}</option>`).join('');
+  onInstanceChange();
+}
+
+async function loadFamilies() {
+  const d = await API.get('/api/benchmarks');
+  if (!d.ok) return;
+  document.getElementById('sm-family').innerHTML =
+    Object.keys(d.data).map(f =>
+      `<option value="${f}">${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join('');
+  loadInstances();
+}
+
+// ── 파라미터 수집 ────────────────────────────────────────────────
+function getParams() {
+  return {
+    instance:       document.getElementById('sm-instance').value,
+    family:         document.getElementById('sm-family').value,
+    scenario:       document.getElementById('sm-scenario').value,
+    ddt:            parseFloat(document.getElementById('sm-ddt').value),
+    n_seeds:        parseInt(document.getElementById('sm-seeds').value),
+    s1_ratio:       parseFloat(document.getElementById('s1-ratio').value) / 100,
+    s1_k:           parseFloat(document.getElementById('s1-k').value),
+    s1_timing_min:  parseFloat(document.getElementById('s1-tmin').value),
+    s1_timing_max:  parseFloat(document.getElementById('s1-tmax').value),
+    s2_ddf:         parseFloat(document.getElementById('s2-ddf').value),
+    s2_arrival_min: parseFloat(document.getElementById('s2-amin').value),
+    s2_arrival_max: parseFloat(document.getElementById('s2-amax').value),
+    s2_n_urgent:    parseInt(document.getElementById('s2-nurge').value),
+  };
+}
+
+// ── 실험 실행 ────────────────────────────────────────────────────
+async function runExperiment() {
+  const params = getParams();
+  const progDiv = document.getElementById('sm-progress');
+  progDiv.style.display = 'block';
+  const prog = makeProgressCard(progDiv,
+    `B1~B10 평가: ${params.instance.toUpperCase()} / ${params.scenario}`);
+  setStatus('실행 중...', 'warning');
+
+  const res = await API.post('/api/baselines/run', params);
+  if (!res.ok) { toast(res.error, 'error'); return; }
+
+  streamTask(res.task_id, {
+    onLog: msg => prog.appendLog(msg),
+    onProgress: p => prog.setProgress(p),
+    onDone: result => {
+      setStatus('준비', 'success');
+      toast('평가 완료!', 'success');
+      showResults(result, params.scenario, params);
+    },
+    onError: e => { setStatus('오류', 'danger'); toast(e, 'error'); },
+  });
+}
+
+async function runEvolution(method) {
+  const params = getParams();
+  params.method = method;
+  const progDiv = document.getElementById('sm-progress');
+  progDiv.style.display = 'block';
+  const prog = makeProgressCard(progDiv,
+    `${method} 진화: ${params.instance.toUpperCase()} / ${params.scenario}`);
+  setStatus('진화 중...', 'warning');
+
+  const res = await API.post('/api/evolution/start', params);
+  if (!res.ok) { toast(res.error, 'error'); return; }
+
+  streamTask(res.task_id, {
+    onLog: msg => prog.appendLog(msg),
+    onProgress: p => prog.setProgress(p),
+    onDone: result => {
+      setStatus('준비', 'success');
+      toast(`${method} 완료! ARI=${fmtPct(result.summary?.ari)}`, 'success');
+      document.getElementById('next-step-card').style.display = 'block';
+    },
+    onError: e => { setStatus('오류', 'danger'); toast(e, 'error'); },
+  });
+}
+
+// ── 결과 표시 ────────────────────────────────────────────────────
+function showResults(result, scenario, params) {
+  lastResultData = result;
+  document.getElementById('sm-result').style.display = 'block';
+  document.getElementById('next-step-card').style.display = 'block';
+  const data = result.results || {};
+  document.getElementById('res-title').textContent =
+    `${result.instance?.toUpperCase()} — ${scenario} (${Object.keys(data).length}개 규칙)`;
+
+  const rows = Object.entries(data).sort((a, b) => a[1].mean - b[1].mean);
+
+  // 결과 테이블
+  let html = `<table class="table table-hover mb-0">
+    <thead><tr>
+      <th>순위</th><th>규칙</th><th>평균 AT</th><th>표준편차</th>
+      <th>납기위반%(PTJ)</th><th>기계유휴(MIT)</th><th>Makespan</th><th>ARI</th><th>유의성(p)</th>
+    </tr></thead><tbody>`;
+  rows.forEach(([bid, v], i) => {
+    const ari = v.ari || 0;
+    const p   = v.wilcoxon?.p;
+    const sig = p != null && p < 0.05
+      ? '<span class="text-success">★ 유의</span>'
+      : '<span class="text-muted">-</span>';
+    html += `<tr class="${i===0?'table-active':''}">
+      <td>${i+1}</td>
+      <td><span class="badge badge-baseline">${bid}</span></td>
+      <td><strong>${fmt(v.mean)}</strong></td>
+      <td>${fmt(v.std)}</td>
+      <td>${fmt(v.ptj||0, 1)}%</td>
+      <td>${fmt(v.mit||0, 1)}</td>
+      <td>${fmt(v.makespan||0, 1)}</td>
+      <td class="${ari>0?'text-danger':'text-success'}">${fmtPct(ari)}</td>
+      <td>${p != null ? sig + ' (' + fmtP(p) + ')' : '—'}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('res-table').innerHTML = html;
+
+  // AT 막대 차트
+  const labels = rows.map(([b]) => b);
+  const means  = rows.map(([, v]) => v.mean);
+  const stds   = rows.map(([, v]) => v.std);
+  Plotly.newPlot('chart-at-bar', [{
+    type: 'bar', x: labels, y: means,
+    error_y: { type: 'data', array: stds, visible: true, color: '#8b949e' },
+    marker: { color: means.map((_, i) => COLORS[i % COLORS.length]) },
+    name: '평균 AT',
+  }], plotLayout({
+    title: '규칙별 평균 납기 지연 (AT, 낮을수록 우수)',
+    yaxis: { title: '평균 납기 지연 (AT)' },
+  }));
+
+  // PTJ 차트
+  const ptjs = rows.map(([, v]) => v.ptj || 0);
+  Plotly.newPlot('chart-ptj', [{
+    type: 'bar', x: labels, y: ptjs,
+    marker: { color: ptjs.map((p, i) => p > 50 ? '#f85149' : p > 25 ? '#d29922' : '#3fb950') },
+    name: '납기위반%',
+  }], plotLayout({ title: '납기 위반율 (%)', yaxis: { title: 'PTJ (%)' } }));
+
+  // Makespan 차트
+  const mks = rows.map(([, v]) => v.makespan || 0);
+  Plotly.newPlot('chart-makespan', [{
+    type: 'bar', x: labels, y: mks,
+    marker: { color: mks.map((_, i) => COLORS[i % COLORS.length]) },
+    name: 'Makespan',
+  }], plotLayout({ title: '평균 전체 완료 시간 (Makespan)', yaxis: { title: 'Makespan' } }));
+
+  // 조치 권고 로드
+  loadRecommendations(scenario, params);
+}
+
+// ── 조치 권고 ────────────────────────────────────────────────────
+async function loadRecommendations(scenario, params) {
+  const s  = scenario || document.getElementById('sm-scenario').value;
+  const p  = params   || getParams();
+  const data = lastResultData?.results || {};
+  const bestRow = Object.entries(data).sort((a, b) => a[1].mean - b[1].mean)[0];
+
+  const body = {
+    scenario:  s,
+    best_rule: bestRow?.[0] || '',
+    s1_ratio:  p.s1_ratio || (parseFloat(document.getElementById('s1-ratio').value) / 100),
+    s1_k:      p.s1_k     || parseFloat(document.getElementById('s1-k').value),
+    s2_ddf:    p.s2_ddf   || parseFloat(document.getElementById('s2-ddf').value),
+    results:   data,
+  };
+
+  const d = await API.post('/api/recommendations', body);
+  if (!d.ok) return;
+
+  const recEl = document.getElementById('rec-list');
+  const levelClass = { success: 'var(--green)', warning: 'var(--yellow)',
+                       danger: 'var(--red)', info: 'var(--accent)' };
+  const levelIcon  = { success: 'check-circle', warning: 'triangle-exclamation',
+                       danger: 'circle-xmark', info: 'circle-info' };
+  recEl.innerHTML = d.data.map(r => `
+    <div class="d-flex gap-3 p-3 mb-2 rounded"
+         style="background:var(--bg-surface); border-left: 3px solid ${levelClass[r.level]||'var(--accent)'}">
+      <i class="fa fa-${levelIcon[r.level]||'info'} mt-1"
+         style="color:${levelClass[r.level]||'var(--accent)'}; flex-shrink:0"></i>
+      <div class="small">${r.text}</div>
+    </div>`).join('');
+  document.getElementById('rec-panel').style.display = 'block';
+}
+
+// ── CSV 내보내기 ─────────────────────────────────────────────────
+function exportResultCSV() {
+  if (!lastResultData) return;
+  const rows = Object.entries(lastResultData.results || {})
+    .sort((a, b) => a[1].mean - b[1].mean)
+    .map(([b, v]) => [b, fmt(v.mean), fmt(v.std),
+                      fmt(v.ptj||0, 1), fmt(v.mit||0, 1),
+                      fmt(v.makespan||0, 1), fmtPct(v.ari)]);
+  exportCSV(['규칙','AT 평균','표준편차','PTJ%','MIT','Makespan','ARI'],
+            rows, '시뮬레이션_결과.csv');
+}
+
+// ── 초기화 ───────────────────────────────────────────────────────
+loadFamilies();
+updateScenarioPanel();
+updateConfigSummary();
+setDelayMode('k');
+</script>
+{% endblock %}

@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: fjssp-workbench
+    env: python
+    plan: free
+    buildCommand: "git clone https://github.com/SchedulingLab/fjsp-instances.git fjsp-instances && pip install -r requirements.txt"
+    startCommand: gunicorn app:app --workers 1 --threads 4 --timeout 120 --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: OPENAI_API_KEY
+        sync: false

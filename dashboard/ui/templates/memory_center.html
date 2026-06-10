@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}경험 메모리 (P3){% endblock %}
+{% block page_title %}경험 메모리 (P3){% endblock %}
+
+{% block content %}
+<div class="wb-alert info mb-4">
+  <i class="fa fa-brain" style="color:var(--accent)"></i>
+  <div>
+    <strong>P3 경험 메모리</strong><br>
+    <span class="text-muted">
+      성공 및 실패한 디스패칭 규칙 패턴을 저장합니다.
+      P3 진화 실행 시 LLM 프롬프트에 자동으로 주입되어 규칙 생성을 유도합니다.
+    </span>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-3">
+    <div class="wb-card">
+      <div class="wb-card-header">
+        <i class="fa fa-filter text-accent"></i>
+        <span class="wb-card-title">필터</span>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">시나리오 태그</label>
+        <select id="mem-tag" class="form-select form-select-sm" onchange="loadMemory()">
+          <option value="">전체</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">유형</label>
+        <select id="mem-type" class="form-select form-select-sm" onchange="applyFilter()">
+          <option value="">전체</option>
+          <option value="SUCCESS">성공 (Success)</option>
+          <option value="FAILURE">실패 (Failure)</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">키워드 검색</label>
+        <input type="text" id="mem-search" class="form-control form-control-sm"
+               placeholder="키워드..." oninput="applyFilter()">
+      </div>
+      <div class="mt-3 p-3 rounded" style="background:var(--bg-surface)">
+        <div class="small text-muted mb-1">통계</div>
+        <div id="mem-stats" class="small"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-9">
+    <div id="mem-placeholder" class="text-center p-5 text-muted">
+      <i class="fa fa-brain fa-3x mb-3" style="opacity:.2"></i>
+      <p>경험 메모리가 없습니다. P3 방식으로 진화를 실행하면 메모리가 생성됩니다.</p>
+    </div>
+    <div id="mem-list"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allMemories = [];
+
+async function loadAllTags() {
+  const d = await API.get('/api/memory');
+  if (!d.ok) return;
+  const tags = Object.keys(d.data);
+  const sel = document.getElementById('mem-tag');
+  sel.innerHTML = '<option value="">전체</option>' +
+    tags.map(t => `<option value="${t}">${t}</option>`).join('');
+
+  allMemories = [];
+  Object.entries(d.data).forEach(([tag, entries]) => {
+    (entries || []).forEach(e => allMemories.push({...e, scenario_tag: tag}));
+  });
+  applyFilter();
+
+  if (!tags.length) return;
+  updateStats();
+}
+
+async function loadMemory() {
+  const tag = document.getElementById('mem-tag').value;
+  if (!tag) { loadAllTags(); return; }
+  const d = await API.get(`/api/memory/${tag}`);
+  if (!d.ok) return;
+  allMemories = (d.data || []).map(e => ({...e, scenario_tag: tag}));
+  applyFilter();
+  updateStats();
+}
+
+function applyFilter() {
+  const type = document.getElementById('mem-type').value;
+  const q    = document.getElementById('mem-search').value.toLowerCase();
+
+  let filtered = allMemories;
+  if (type) filtered = filtered.filter(e => (e.pattern||'').includes(type));
+  if (q)    filtered = filtered.filter(e =>
+    (e.pattern||'').toLowerCase().includes(q) ||
+    (e.rule_code||'').toLowerCase().includes(q));
+
+  renderMemories(filtered);
+  updateStats();
+}
+
+function updateStats() {
+  const success = allMemories.filter(e => (e.pattern||'').includes('SUCCESS')).length;
+  const failure = allMemories.filter(e => (e.pattern||'').includes('FAILURE')).length;
+  const avgAT = allMemories.length
+    ? (allMemories.reduce((s,e) => s + (e.at_score||0), 0) / allMemories.length).toFixed(3)
+    : '—';
+  document.getElementById('mem-stats').innerHTML = `
+    <div>전체: <strong>${allMemories.length}</strong></div>
+    <div class="text-success">성공: <strong>${success}</strong></div>
+    <div class="text-danger">실패: <strong>${failure}</strong></div>
+    <div>평균 AT: <strong>${avgAT}</strong></div>`;
+}
+
+function renderMemories(entries) {
+  const container = document.getElementById('mem-list');
+  if (!entries.length) {
+    document.getElementById('mem-placeholder').style.display = 'block';
+    container.innerHTML = '';
+    return;
+  }
+  document.getElementById('mem-placeholder').style.display = 'none';
+
+  container.innerHTML = entries.slice(0, 50).map(e => {
+    const isSuccess = (e.pattern||'').includes('SUCCESS');
+    const ari = e.improvement_ratio != null
+      ? (e.improvement_ratio * 100).toFixed(1) : null;
+    const code = (e.rule_code || '').trim();
+    const codeSnippet = code.length > 300 ? code.slice(0,300)+'...' : code;
+
+    return `<div class="wb-card mb-3">
+      <div class="wb-card-header">
+        <span class="badge ${isSuccess ? 'badge-success' : 'badge-failure'} me-2">
+          ${isSuccess ? '✓ 성공' : '✗ 실패'}
+        </span>
+        <span class="wb-card-title">
+          ${e.scenario_tag} — ${e.iteration || '?'}세대
+        </span>
+        <div class="ms-auto d-flex gap-2 small">
+          ${e.at_score != null ? `<span class="text-muted">AT: ${fmt(e.at_score)}</span>` : ''}
+          ${ari != null ? `<span class="${isSuccess?'text-success':'text-danger'}">${isSuccess?'+':''}${ari}%</span>` : ''}
+        </div>
+      </div>
+      ${e.pattern ? `<div class="small text-secondary mb-2 p-2 rounded" style="background:var(--bg-surface)">${e.pattern}</div>` : ''}
+      ${code ? `<pre style="font-size:11px; color:#8b949e; background:var(--bg-surface); padding:10px; border-radius:6px; overflow-x:auto; max-height:160px; margin:0">${codeSnippet}</pre>` : ''}
+    </div>`;
+  }).join('');
+}
+
+loadAllTags();
+</script>
+{% endblock %}

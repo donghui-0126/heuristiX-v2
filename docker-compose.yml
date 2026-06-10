@@ -1,18 +1,14 @@
 services:
-  hub:
+  dashboard:
     build:
-      context: .
-      dockerfile: hub/Dockerfile
-    image: heuristix-hub:latest
-    container_name: heuristix-hub
-    environment:
-      OPENAI_API_KEY: "${OPENAI_API_KEY}"
+      context: ./dashboard
+    image: heuristix-dashboard:latest
+    container_name: heuristix-dashboard
     env_file:
-      - .env
+      - .env            # OPENAI_API_KEY, OPENAI_MODEL
     ports:
-      - "8000:8000"   # FastAPI
-      - "8501:8501"   # Streamlit UI
+      - "5000:5000"
     volumes:
-      - ./hub/workspace:/app/hub/workspace
-      - ./runs:/app/runs
+      - ./dashboard/results:/app/results
+      - ./dashboard/benchmarks:/app/benchmarks
     restart: unless-stopped

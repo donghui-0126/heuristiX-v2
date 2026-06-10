@@ -1,0 +1,434 @@
+{% extends "base.html" %}
+{% block title %}이벤트 변환기{% endblock %}
+{% block page_title %}현업 이벤트 → 시뮬레이션 파라미터 변환{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+  <!-- 왼쪽: 이벤트 입력 폼 -->
+  <div class="col-lg-4">
+    <div class="wb-card">
+      <div class="wb-card-header">
+        <i class="fa fa-triangle-exclamation text-accent"></i>
+        <span class="wb-card-title">공급망 이벤트 보고</span>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-bold">이벤트 유형</label>
+        <div class="d-flex flex-column gap-2">
+          <label class="d-flex align-items-center gap-2" style="cursor:pointer">
+            <input type="checkbox" class="form-check-input event-type" value="항만 폐쇄">
+            <span><i class="fa fa-ship text-muted me-1" style="font-size:12px"></i>항만 폐쇄</span>
+          </label>
+          <label class="d-flex align-items-center gap-2" style="cursor:pointer">
+            <input type="checkbox" class="form-check-input event-type" value="공급업체 화재">
+            <span><i class="fa fa-fire text-muted me-1" style="font-size:12px"></i>공급업체 화재</span>
+          </label>
+          <label class="d-flex align-items-center gap-2" style="cursor:pointer">
+            <input type="checkbox" class="form-check-input event-type" value="품질 문제">
+            <span><i class="fa fa-circle-xmark text-muted me-1" style="font-size:12px"></i>품질 문제</span>
+          </label>
+          <label class="d-flex align-items-center gap-2" style="cursor:pointer">
+            <input type="checkbox" class="form-check-input event-type" value="파업">
+            <span><i class="fa fa-users text-muted me-1" style="font-size:12px"></i>파업</span>
+          </label>
+          <label class="d-flex align-items-center gap-2" style="cursor:pointer">
+            <input type="checkbox" class="form-check-input event-type" value="지정학적 리스크">
+            <span><i class="fa fa-globe text-muted me-1" style="font-size:12px"></i>지정학적 리스크</span>
+          </label>
+          <label class="d-flex align-items-center gap-2" style="cursor:pointer">
+            <input type="checkbox" class="form-check-input event-type" value="긴급 주문">
+            <span><i class="fa fa-bolt text-muted me-1" style="font-size:12px"></i>긴급 주문 발생</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-bold">예상 지연</label>
+        <div class="input-group input-group-sm">
+          <input type="number" id="delay-days" class="form-control" value="7" min="0" max="365">
+          <span class="input-group-text">일</span>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-bold">영향 부품 / 재료</label>
+        <input type="text" id="affected-parts" class="form-control form-control-sm"
+               placeholder="예: Bearing, 모터 코어, 전자 기판">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-bold">심각도</label>
+        <div class="d-flex gap-3">
+          <label class="d-flex align-items-center gap-1" style="cursor:pointer">
+            <input type="radio" name="severity" value="low" class="form-check-input">
+            <span class="text-success small">경미</span>
+          </label>
+          <label class="d-flex align-items-center gap-1" style="cursor:pointer">
+            <input type="radio" name="severity" value="medium" class="form-check-input" checked>
+            <span class="text-warning small">중간</span>
+          </label>
+          <label class="d-flex align-items-center gap-1" style="cursor:pointer">
+            <input type="radio" name="severity" value="high" class="form-check-input">
+            <span class="text-danger small">심각</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label fw-bold">추가 정보 <span class="text-muted fw-normal">(선택)</span></label>
+        <textarea id="additional-info" class="form-control form-control-sm" rows="3"
+                  placeholder="복구 예정, 대응 조치, 현장 상황 등 자유 기술"></textarea>
+      </div>
+
+      <button class="btn btn-primary w-100" onclick="translateEvent()" id="translate-btn">
+        <i class="fa fa-wand-magic-sparkles me-2"></i>AI 파라미터 변환
+      </button>
+      <div id="translate-loading" style="display:none" class="text-center mt-2 text-muted small">
+        <i class="fa fa-spinner fa-spin me-1"></i>LLM이 이벤트를 분석하는 중...
+      </div>
+    </div>
+  </div>
+
+  <!-- 오른쪽: 변환 결과 -->
+  <div class="col-lg-8">
+
+    <div id="et-placeholder" class="wb-card text-center p-5 text-muted">
+      <i class="fa fa-sliders fa-3x mb-3" style="opacity:.2"></i>
+      <p class="mb-1">공급망 이벤트를 입력하고 <strong>AI 파라미터 변환</strong> 버튼을 클릭하세요.</p>
+      <p class="small mb-0" style="opacity:.6">LLM이 이벤트 설명을 분석하여 시뮬레이션 파라미터(s1_ratio, s1_k, s2_ddf 등)로 자동 변환합니다.</p>
+    </div>
+
+    <!-- 변환 결과 (초기: 숨김) -->
+    <div id="et-result" style="display:none">
+
+      <!-- 파라미터 카드 -->
+      <div class="wb-card mb-3">
+        <div class="wb-card-header">
+          <i class="fa fa-sliders text-accent"></i>
+          <span class="wb-card-title">변환된 시뮬레이션 파라미터</span>
+          <span id="et-scenario-badge" class="badge ms-auto px-3"></span>
+        </div>
+
+        <!-- S1 섹션 -->
+        <div id="et-s1-section" style="display:none">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge badge-baseline">S1</span>
+            <span class="wb-card-subtitle mb-0">부품 지연 파라미터</span>
+          </div>
+          <div class="row g-3 mb-2" id="et-s1-params"></div>
+          <div id="et-s1-rationale" class="small text-muted p-2 mb-3"
+               style="background:var(--bg-surface); border-radius:6px; border-left:3px solid var(--accent); line-height:1.7"></div>
+        </div>
+
+        <!-- S1 + S2 구분선 -->
+        <div id="et-s12-sep" style="display:none"><hr style="border-color:var(--border)"></div>
+
+        <!-- S2 섹션 -->
+        <div id="et-s2-section" style="display:none">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge badge-llm">S2</span>
+            <span class="wb-card-subtitle mb-0">긴급 주문 파라미터</span>
+          </div>
+          <div class="row g-3 mb-2" id="et-s2-params"></div>
+          <div id="et-s2-rationale" class="small text-muted p-2 mb-3"
+               style="background:var(--bg-surface); border-radius:6px; border-left:3px solid var(--purple); line-height:1.7"></div>
+        </div>
+
+        <hr style="border-color:var(--border)">
+        <div class="wb-card-subtitle mb-1">영향 분석</div>
+        <div id="et-impact" class="text-secondary" style="font-size:14px; line-height:1.8"></div>
+      </div>
+
+      <!-- 시뮬레이션 실행 카드 -->
+      <div class="wb-card mb-3">
+        <div class="wb-card-header">
+          <i class="fa fa-play-circle text-accent"></i>
+          <span class="wb-card-title">이 파라미터로 시뮬레이션 실행</span>
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col">
+            <label class="form-label mb-1">패밀리</label>
+            <select id="et-family" class="form-select form-select-sm" onchange="onEtFamilyChange()"></select>
+          </div>
+          <div class="col">
+            <label class="form-label mb-1">인스턴스</label>
+            <select id="et-instance" class="form-select form-select-sm"></select>
+          </div>
+        </div>
+        <div id="et-run-buttons" class="d-flex gap-2"></div>
+      </div>
+
+      <!-- 진행 상황 -->
+      <div id="et-progress" style="display:none" class="mb-3"></div>
+
+      <!-- 시뮬레이션 결과 -->
+      <div id="et-sim-result" style="display:none"></div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let _translatedData = null;
+let _allBenchmarks  = {};
+
+// ── 인스턴스 선택기 ────────────────────────────────────────
+async function loadInstances() {
+  const d = await API.get('/api/benchmarks');
+  if (!d.ok) return;
+  _allBenchmarks = d.data;
+  const saved = localStorage.getItem('fjssp_family');
+  const families = Object.keys(d.data);
+  const sel = families.includes(saved) ? saved : families[0];
+  document.getElementById('et-family').innerHTML =
+    families.map(f => `<option value="${f}"${f===sel?' selected':''}>${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join('');
+  onEtFamilyChange();
+}
+
+function onEtFamilyChange() {
+  const fam = document.getElementById('et-family').value;
+  const instances = _allBenchmarks[fam] || [];
+  const saved = localStorage.getItem('fjssp_instance');
+  document.getElementById('et-instance').innerHTML =
+    instances.map(n => `<option value="${n}"${n===saved?' selected':''}>${n.toUpperCase()}</option>`).join('');
+}
+
+// ── 이벤트 변환 ────────────────────────────────────────────
+async function translateEvent() {
+  const eventTypes = [...document.querySelectorAll('.event-type:checked')].map(c => c.value);
+  const delayDays  = parseFloat(document.getElementById('delay-days').value) || 0;
+  const parts      = document.getElementById('affected-parts').value.trim();
+  const severity   = document.querySelector('input[name="severity"]:checked')?.value || 'medium';
+  const addInfo    = document.getElementById('additional-info').value.trim();
+
+  if (!eventTypes.length) { toast('이벤트 유형을 하나 이상 선택해 주세요.', 'warning'); return; }
+
+  document.getElementById('translate-loading').style.display = 'block';
+  document.getElementById('translate-btn').disabled = true;
+  document.getElementById('et-placeholder').style.display = 'none';
+  document.getElementById('et-result').style.display = 'none';
+
+  const r = await API.post('/api/event/translate', {
+    event_types: eventTypes, delay_days: delayDays,
+    affected_parts: parts, severity, additional_info: addInfo,
+  });
+
+  document.getElementById('translate-loading').style.display = 'none';
+  document.getElementById('translate-btn').disabled = false;
+
+  if (!r.ok) {
+    toast(r.error || '변환 실패', 'error');
+    document.getElementById('et-placeholder').style.display = 'block';
+    return;
+  }
+
+  _translatedData = r.data;
+  displayTranslation(r.data);
+}
+
+// ── 파라미터 시각화 카드 ────────────────────────────────────
+function paramBar(label, value, min, max, unit, desc) {
+  const pct   = Math.min(100, Math.max(0, (value - min) / (max - min) * 100));
+  const color = pct < 35 ? 'var(--green)' : pct < 70 ? 'var(--yellow)' : 'var(--accent)';
+  return `
+  <div class="col-md-6">
+    <div style="background:var(--bg-surface); padding:12px 14px; border-radius:8px; height:100%">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <span class="small fw-bold" style="font-size:11px">${label}</span>
+        <span class="small fw-bold" style="color:${color}">${value}${unit}</span>
+      </div>
+      <div style="background:var(--border); border-radius:4px; height:5px; margin-bottom:8px">
+        <div style="width:${pct}%; height:100%; background:${color}; border-radius:4px; transition:width .5s ease"></div>
+      </div>
+      <div class="text-muted" style="font-size:10px; line-height:1.4">${desc}</div>
+    </div>
+  </div>`;
+}
+
+// ── 변환 결과 표시 ─────────────────────────────────────────
+function displayTranslation(data) {
+  document.getElementById('et-result').style.display = 'block';
+
+  const scen = data.primary_scenario || 'S1';
+  const hasS1 = scen.includes('S1');
+  const hasS2 = scen.includes('S2');
+
+  // 시나리오 배지
+  const badge = document.getElementById('et-scenario-badge');
+  badge.textContent = scen;
+  if (hasS1 && hasS2) {
+    badge.style.cssText = 'background:#d29922; color:#000';
+  } else if (hasS1) {
+    badge.className = 'badge badge-baseline ms-auto px-3';
+  } else {
+    badge.className = 'badge badge-llm ms-auto px-3';
+  }
+
+  // S1 파라미터
+  document.getElementById('et-s1-section').style.display = hasS1 ? 'block' : 'none';
+  document.getElementById('et-s12-sep').style.display    = (hasS1 && hasS2) ? 'block' : 'none';
+  document.getElementById('et-s2-section').style.display = hasS2 ? 'block' : 'none';
+
+  if (hasS1 && data.s1_params) {
+    const p = data.s1_params;
+    document.getElementById('et-s1-params').innerHTML =
+      paramBar('영향 작업 비율 (s1_ratio)',
+        (p.s1_ratio * 100).toFixed(0), 0, 100, '%',
+        `전체 작업의 ${(p.s1_ratio*100).toFixed(0)}%가 부품 지연 영향을 받음`) +
+      paramBar('지연 배수 (s1_k)',
+        p.s1_k.toFixed(2), 0, 5, '×',
+        `평균 공정 시간의 ${p.s1_k.toFixed(2)}배 만큼 지연 발생`) +
+      paramBar('지연 발생 타이밍 (최솟값)',
+        (p.s1_timing_min * 100).toFixed(0), 0, 100, '%T',
+        `전체 스케줄의 ${(p.s1_timing_min*100).toFixed(0)}% 시점 이후 이벤트 발생`) +
+      paramBar('지연 발생 타이밍 (최댓값)',
+        (p.s1_timing_max * 100).toFixed(0), 0, 100, '%T',
+        `전체 스케줄의 ${(p.s1_timing_max*100).toFixed(0)}% 시점 이전 이벤트 발생`);
+
+    const rat = data.rationale || {};
+    const lines = [rat.scenario_reason, rat.s1_ratio_reason, rat.s1_k_reason].filter(Boolean);
+    document.getElementById('et-s1-rationale').innerHTML =
+      lines.map(t => `<span style="opacity:.8">•</span> ${t}`).join('<br>');
+  }
+
+  if (hasS2 && data.s2_params) {
+    const p = data.s2_params;
+    document.getElementById('et-s2-params').innerHTML =
+      paramBar('납기 여유도 (s2_ddf)',
+        p.s2_ddf.toFixed(2), 0, 2, '×',
+        `낮을수록 납기 촉박 (0.1=매우 긴급 / 2.0=여유)`) +
+      paramBar('긴급 주문 건수 (s2_n_urgent)',
+        p.s2_n_urgent, 0, 5, '건',
+        `${p.s2_n_urgent}건의 긴급 작업이 스케줄 중간에 삽입됨`) +
+      paramBar('도착 타이밍 (최솟값)',
+        (p.s2_arrival_min * 100).toFixed(0), 0, 100, '%T',
+        `전체 스케줄의 ${(p.s2_arrival_min*100).toFixed(0)}% 시점 이후 긴급 주문 도착`) +
+      paramBar('도착 타이밍 (최댓값)',
+        (p.s2_arrival_max * 100).toFixed(0), 0, 100, '%T',
+        `전체 스케줄의 ${(p.s2_arrival_max*100).toFixed(0)}% 시점 이전 긴급 주문 도착`);
+
+    const rat = data.rationale || {};
+    const lines = [rat.scenario_reason, rat.s2_reason].filter(Boolean);
+    document.getElementById('et-s2-rationale').innerHTML =
+      lines.map(t => `<span style="opacity:.8">•</span> ${t}`).join('<br>');
+  }
+
+  // 영향 분석 텍스트
+  document.getElementById('et-impact').textContent = data.impact_summary || '';
+
+  // 시뮬레이션 실행 버튼 생성
+  const btnDiv = document.getElementById('et-run-buttons');
+  btnDiv.innerHTML = '';
+  if (hasS1) {
+    const b = document.createElement('button');
+    b.className = 'btn btn-primary flex-1';
+    b.innerHTML = '<i class="fa fa-play me-2"></i>S1 시뮬레이션 실행';
+    b.onclick = () => runSimulation('S1');
+    btnDiv.appendChild(b);
+  }
+  if (hasS2) {
+    const b = document.createElement('button');
+    b.className = hasS1 ? 'btn btn-outline-secondary flex-1' : 'btn btn-primary flex-1';
+    b.innerHTML = '<i class="fa fa-play me-2"></i>S2 시뮬레이션 실행';
+    b.onclick = () => runSimulation('S2');
+    btnDiv.appendChild(b);
+  }
+}
+
+// ── 시뮬레이션 실행 ─────────────────────────────────────────
+async function runSimulation(scenario) {
+  if (!_translatedData) return;
+  const family   = document.getElementById('et-family').value;
+  const instance = document.getElementById('et-instance').value;
+  if (!instance) { toast('인스턴스를 선택해 주세요.', 'warning'); return; }
+
+  localStorage.setItem('fjssp_family', family);
+  localStorage.setItem('fjssp_instance', instance);
+
+  const body = { instance, family, scenario };
+  if (scenario === 'S1' && _translatedData.s1_params)
+    Object.assign(body, _translatedData.s1_params);
+  if (scenario === 'S2' && _translatedData.s2_params)
+    Object.assign(body, _translatedData.s2_params);
+
+  const progDiv = document.getElementById('et-progress');
+  progDiv.style.display = 'block';
+  document.getElementById('et-sim-result').style.display = 'none';
+  const prog = makeProgressCard(
+    progDiv,
+    `${instance.toUpperCase()} / ${scenario} — 변환된 파라미터로 기본 규칙 평가 중...`
+  );
+  setStatus('실행 중...', 'warning');
+
+  const res = await API.post('/api/baselines/run', body);
+  if (!res.ok) { toast(res.error, 'error'); return; }
+
+  streamTask(res.task_id, {
+    onLog: msg => prog.appendLog(msg),
+    onProgress: p => prog.setProgress(p),
+    onDone: result => {
+      setStatus('준비', 'success');
+      toast(`${scenario} 시뮬레이션 완료!`, 'success');
+      displaySimResult(result, scenario);
+    },
+    onError: e => { setStatus('오류', 'danger'); toast(e, 'error'); },
+  });
+}
+
+// ── 시뮬레이션 결과 표시 ───────────────────────────────────
+function displaySimResult(result, scenario) {
+  const div = document.getElementById('et-sim-result');
+  div.style.display = 'block';
+
+  const data   = result.results || {};
+  const sorted = Object.entries(data).sort((a, b) => a[1].mean - b[1].mean);
+  const best   = sorted[0];
+
+  div.innerHTML = `
+  <div class="wb-card">
+    <div class="wb-card-header">
+      <i class="fa fa-chart-bar text-accent"></i>
+      <span class="wb-card-title">시뮬레이션 결과 — ${scenario}</span>
+    </div>
+    <div class="stat-grid mb-3">
+      <div class="stat-card">
+        <div class="stat-value" style="font-size:18px">${best ? best[0] : '—'}</div>
+        <div class="stat-label">최적 규칙</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="font-size:18px">${best ? fmt(best[1].mean) : '—'}</div>
+        <div class="stat-label">최적 AT 평균</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="font-size:18px; color:var(--green)">${best ? fmt(best[1].ptj,1)+'%' : '—'}</div>
+        <div class="stat-label">납기 위반율</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="font-size:18px">${sorted.length}</div>
+        <div class="stat-label">평가 규칙 수</div>
+      </div>
+    </div>
+    ${buildTable(
+      ['순위', '규칙', 'AT 평균', 'AT 표준편차', '납기 위반%'],
+      sorted.slice(0, 10).map(([bid, v], i) => [
+        i + 1,
+        `<span class="badge ${i === 0 ? 'badge-success' : 'badge-baseline'}">${bid}</span>`,
+        `<strong>${fmt(v.mean)}</strong>`,
+        fmt(v.std),
+        fmt(v.ptj, 1) + '%',
+      ])
+    )}
+    <div class="mt-3 text-center">
+      <a href="/simulation-results" class="btn btn-sm btn-outline-secondary">
+        <i class="fa fa-chart-bar me-1"></i>시뮬레이션 결과 페이지에서 상세 보기
+      </a>
+    </div>
+  </div>`;
+}
+
+loadInstances();
+</script>
+{% endblock %}

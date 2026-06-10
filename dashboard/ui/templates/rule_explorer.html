@@ -1,0 +1,744 @@
+{% extends "base.html" %}
+{% block title %}규칙 탐색기{% endblock %}
+{% block page_title %}규칙 탐색기{% endblock %}
+
+{% block head %}
+<style>
+.rule-meta-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+.meta-chip {
+  background:var(--bg-surface); border:1px solid var(--border); border-radius:20px;
+  padding:3px 10px; font-size:11px; color:var(--text-secondary);
+}
+.desc-block {
+  background:var(--bg-surface);
+  border-left:3px solid var(--accent);
+  border-radius:0 6px 6px 0;
+  padding:10px 14px;
+  margin-bottom:10px;
+}
+.desc-label {
+  font-size:10px; font-weight:700; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--text-muted); margin-bottom:4px;
+}
+.desc-formula {
+  font-family:"JetBrains Mono","Fira Code",monospace;
+  font-size:12px; color:#79c0ff; background:#0a0d12;
+  border-radius:4px; padding:6px 10px; margin-top:4px;
+}
+.var-badge {
+  display:inline-block; background:#1f3a5f; color:#79c0ff;
+  border:1px solid #1f6feb; border-radius:4px;
+  padding:2px 7px; font-size:11px; margin:2px;
+  font-family:"JetBrains Mono","Fira Code",monospace;
+}
+.pro-badge  { background:#1a3a26; color:#3fb950; border-color:#238636; }
+.con-badge  { background:#3a1a1a; color:#f85149; border-color:#da3633; }
+.pros-cons  { display:flex; gap:12px; flex-wrap:wrap; margin-top:6px; }
+.pc-item    { display:flex; align-items:flex-start; gap:6px; font-size:12px; }
+.pc-icon    { margin-top:1px; flex-shrink:0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="split-pane">
+  <!-- ── 왼쪽: 규칙 목록 ────────────────────────────────── -->
+  <div class="split-left">
+    <div class="wb-card h-100 p-0" style="overflow:hidden">
+      <div class="p-3 border-bottom" style="border-color:var(--border)">
+        <div class="wb-card-title mb-2"><i class="fa fa-code text-accent me-2"></i>규칙 목록</div>
+        <input type="text" id="rule-search" class="form-control form-control-sm"
+               placeholder="규칙 검색..." oninput="filterRules(this.value)">
+      </div>
+      <div id="rule-list" style="overflow-y:auto; max-height:calc(100vh - 220px)">
+        <div class="text-center text-muted p-4">로딩 중...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 오른쪽: 설명 + 코드 뷰어 ──────────────────────── -->
+  <div class="split-right" style="overflow-y:auto">
+
+    <div id="rule-placeholder" class="text-center p-5 text-muted">
+      <i class="fa fa-arrow-left fa-2x mb-3" style="opacity:.3"></i>
+      <p>왼쪽에서 규칙을 선택하면 설명과 소스 코드가 표시됩니다.</p>
+    </div>
+
+    <div id="rule-detail" style="display:none">
+
+      <!-- ① 헤더 카드 -->
+      <div class="wb-card mb-3">
+        <div class="wb-card-header">
+          <i class="fa fa-info-circle text-accent"></i>
+          <span class="wb-card-title" id="rd-title">—</span>
+          <span class="badge ms-2" id="rd-type-badge">—</span>
+          <span class="badge ms-1" id="rd-name-badge" style="background:var(--bg-surface);color:var(--text-secondary);border:1px solid var(--border)"></span>
+          <button class="btn btn-sm btn-icon ms-auto" onclick="copyCode()" title="코드 복사">
+            <i class="fa fa-copy"></i>
+          </button>
+        </div>
+        <div class="rule-meta-row" id="rd-meta"></div>
+      </div>
+
+      <!-- ② 규칙 설명 카드 -->
+      <div class="wb-card mb-3" id="rd-desc-card">
+        <div class="wb-card-header">
+          <i class="fa fa-book-open text-accent"></i>
+          <span class="wb-card-title">규칙 설명</span>
+        </div>
+        <div id="rd-desc-content"></div>
+      </div>
+
+      <!-- 자연어 설명 (LLM 호출) -->
+      <div class="wb-card mb-3" id="rd-nl-card" style="display:none">
+        <div class="wb-card-header">
+          <i class="fa fa-language text-accent"></i>
+          <span class="wb-card-title">자연어 설명 (AI)</span>
+          <button class="btn btn-sm btn-icon ms-auto" onclick="explainCurrentRule()" id="rd-nl-btn"
+                  title="이 규칙을 자연어로 다시 설명">
+            <i class="fa fa-rotate"></i>
+          </button>
+        </div>
+        <div id="rd-nl-content" class="p-2" style="font-size:13px; line-height:1.6">
+          <button class="btn btn-sm btn-primary" onclick="explainCurrentRule()">
+            <i class="fa fa-language me-1"></i>자연어로 설명 보기
+          </button>
+        </div>
+      </div>
+
+      <!-- heuristiX 규칙 실험 실행 -->
+      <div class="wb-card mb-3" id="rd-hx-card" style="display:none">
+        <div class="wb-card-header">
+          <i class="fa fa-flask text-accent"></i>
+          <span class="wb-card-title">이 규칙으로 직접 실험</span>
+        </div>
+        <div class="p-2" style="font-size:13px">
+          <div class="row g-2 mb-2">
+            <div class="col-md-5">
+              <label class="form-label small mb-1">인스턴스 (custom)</label>
+              <select id="hx-instance" class="form-select form-select-sm">
+                <option value="synth12x6_flex00">synth12x6_flex00 (strict JSSP)</option>
+                <option value="synth12x6_flex05" selected>synth12x6_flex05 (moderate FJSSP)</option>
+                <option value="synth12x6_flex10">synth12x6_flex10 (full FJSSP)</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small mb-1">시나리오</label>
+              <select id="hx-scenario" class="form-select form-select-sm">
+                <option value="S0">S0</option>
+                <option value="S1" selected>S1</option>
+                <option value="S2">S2</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small mb-1">반복</label>
+              <input id="hx-seeds" type="number" class="form-control form-control-sm" value="20" min="5" max="100">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+              <button class="btn btn-primary btn-sm w-100" onclick="runCurrentHxRule()">
+                <i class="fa fa-play me-1"></i>실행
+              </button>
+            </div>
+          </div>
+          <div id="hx-result" class="small mt-2"></div>
+        </div>
+      </div>
+
+      <!-- ③ Monaco 에디터 -->
+      <div class="wb-card p-0 mb-3" style="overflow:hidden">
+        <div class="p-2 border-bottom d-flex align-items-center gap-2" style="border-color:var(--border)">
+          <i class="fa fa-file-code text-accent"></i>
+          <span class="small text-secondary">Python 소스 코드</span>
+          <span class="badge bg-secondary ms-auto" id="rd-lines">0 줄</span>
+        </div>
+        <div id="monaco-container" style="height:400px"></div>
+      </div>
+
+      <!-- ④ 계보 (있을 경우) -->
+      <div class="wb-card mb-3" id="rd-lineage-card" style="display:none">
+        <div class="wb-card-header">
+          <i class="fa fa-sitemap text-accent"></i>
+          <span class="wb-card-title">규칙 계보</span>
+        </div>
+        <div id="rd-lineage"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+<script>
+// ──────────────────────────────────────────────────────────────────
+// 기본 규칙(B1-B10) 상세 설명 사전
+// ──────────────────────────────────────────────────────────────────
+const BASELINE_DESC = {
+  B1: {
+    fullName: "FIFO (선입선출, First-In-First-Out)",
+    summary: "작업이 기계에 도착한 순서대로 처리합니다. 가장 직관적인 규칙으로, 대기열에 먼저 들어온 작업이 먼저 처리됩니다.",
+    formula: "priority = −release_time",
+    formulaKr: "도착 시간이 빠를수록(작을수록) 우선순위가 높습니다.",
+    vars: ["release_time"],
+    pros: ["구현이 단순하고 공정함", "기아(starvation) 현상 없음"],
+    cons: ["납기일을 전혀 고려하지 않음", "시급한 작업이 늦게 처리될 수 있음"],
+    useCases: "작업 간 납기 차이가 없거나 공정성이 중요한 경우",
+  },
+  B2: {
+    fullName: "EDD (최조납기, Earliest Due Date)",
+    summary: "납기일이 가장 빠른 작업을 우선 처리합니다. 납기 지연을 최소화하는 대표적인 규칙입니다.",
+    formula: "priority = −due_date",
+    formulaKr: "납기일이 빠를수록(작을수록) 우선순위가 높습니다.",
+    vars: ["due_date"],
+    pros: ["최대 납기 지연(maximum tardiness)을 최소화", "단일 기계 환경에서 최적임이 수학적으로 증명됨"],
+    cons: ["잔여 처리 시간을 무시함", "단순한 작업이 늦게 시작해도 우선 처리될 수 있음"],
+    useCases: "납기 준수율이 가장 중요한 환경",
+  },
+  B3: {
+    fullName: "SPT (최단처리시간, Shortest Processing Time)",
+    summary: "현재 공정의 처리 시간이 가장 짧은 작업을 우선 처리합니다. 기계 처리량(throughput)을 높이는 데 효과적입니다.",
+    formula: "priority = −processing_time",
+    formulaKr: "처리 시간이 짧을수록 우선순위가 높습니다.",
+    vars: ["processing_time"],
+    pros: ["평균 대기 시간 및 흐름 시간 최소화", "WIP(재공품) 감소에 효과적"],
+    cons: ["처리 시간이 긴 작업의 기아(starvation) 발생 가능", "납기일 무시"],
+    useCases: "평균 완료 시간이나 WIP를 줄이려는 경우",
+  },
+  B4: {
+    fullName: "CR (임계비율, Critical Ratio)",
+    summary: "남은 납기 시간을 잔여 처리 시간으로 나눈 비율입니다. 비율이 낮을수록 (납기가 촉박할수록) 우선 처리합니다.",
+    formula: "CR = (due_date − current_time) / remaining_pt\npriority = −CR",
+    formulaKr: "CR < 1이면 이미 지연 위험. 값이 작을수록 더 긴급합니다.",
+    vars: ["due_date", "current_time", "remaining_pt"],
+    pros: ["납기 긴박도를 동적으로 반영", "잔여 처리 시간까지 고려한 균형 잡힌 규칙"],
+    cons: ["처리 시간 계산 오류에 민감", "동률 처리 기준 부재"],
+    useCases: "납기 준수와 처리 시간을 함께 고려할 때",
+  },
+  B5: {
+    fullName: "Urgency (긴급 주문 우선)",
+    summary: "긴급 주문 플래그(urgent_order_flag)가 있는 작업에 큰 가산점을 부여하고, 동점이면 납기가 빠른 작업을 선택합니다.",
+    formula: "priority = urgent_order_flag × 1000 − due_date",
+    formulaKr: "긴급 플래그 = 1이면 최우선, 일반 작업끼리는 EDD 순서.",
+    vars: ["urgent_order_flag", "due_date"],
+    pros: ["S2 시나리오(긴급 주문) 대응에 특화", "비즈니스 요구 사항 직접 반영"],
+    cons: ["긴급 작업이 많으면 효과 희석", "정상 작업의 납기 지연 가능"],
+    useCases: "외부 긴급 주문이 빈번하게 발생하는 공급망 환경 (S2 시나리오)",
+  },
+  B6: {
+    fullName: "PT + WINQ + SL (복합 규칙)",
+    summary: "처리 시간(PT), 다음 기계의 대기 작업량(WINQ), 여유 시간(Slack)의 합이 작은 작업을 우선 처리합니다. 세 가지 요소를 종합적으로 고려합니다.",
+    formula: "slack = max(0, due_date − current_time − remaining_pt)\nwinq = 현재 기계의 대기 작업량\npriority = −(PT + WINQ + SL)",
+    formulaKr: "세 합이 작을수록 → 빠른 처리 + 여유 없음 + 병목 기계 회피.",
+    vars: ["processing_time", "due_date", "current_time", "remaining_pt", "machine_workloads"],
+    pros: ["처리 시간, 납기, 기계 부하를 동시에 고려", "복잡한 FJSSP 환경에 강인함"],
+    cons: ["파라미터 해석이 복잡함", "개별 요소 간 스케일 차이로 왜곡 가능"],
+    useCases: "기계 부하 균형과 납기 준수를 동시에 달성해야 할 때",
+  },
+  B7: {
+    fullName: "CR + SPT (혼합 규칙, α=0.5)",
+    summary: "임계비율(CR)과 최단처리시간(SPT)을 동일 가중치(50:50)로 혼합한 규칙입니다. 납기 긴박도와 처리 효율성을 균형 있게 반영합니다.",
+    formula: "priority = −(0.5 × CR + 0.5 × SPT)\nCR = (due_date − current_time) / remaining_pt",
+    formulaKr: "α=0.5: CR과 SPT 동등 중요. α를 높이면 납기 우선, 낮추면 처리 속도 우선.",
+    vars: ["due_date", "current_time", "remaining_pt", "processing_time"],
+    pros: ["CR과 SPT의 장점을 모두 활용", "납기-효율 트레이드오프를 균형 있게 처리"],
+    cons: ["α 가중치 튜닝 필요", "두 지표의 스케일이 다를 때 왜곡 가능"],
+    useCases: "납기 준수율과 평균 완료 시간을 모두 개선하고 싶을 때",
+  },
+  B8: {
+    fullName: "AT + RPT (도착시간 + 잔여처리시간)",
+    summary: "작업 도착 시간과 잔여 처리 시간의 합이 작은 작업을 우선 처리합니다. 일찍 도착했고 빨리 끝낼 수 있는 작업을 선호합니다.",
+    formula: "priority = −(release_time + remaining_pt)",
+    formulaKr: "도착이 빠르고 잔여 처리량이 적을수록 우선.",
+    vars: ["release_time", "remaining_pt"],
+    pros: ["구현이 단순함", "대기 오래된 작업 + 빠른 완료 동시 고려"],
+    cons: ["납기일 무시", "처리 시간이 긴 작업은 오래 기다려야 함"],
+    useCases: "도착 순서와 공정 잔여량을 같이 고려하는 소규모 환경",
+  },
+  B9: {
+    fullName: "PDDR (동적 자원 할당 기반 우선순위)",
+    summary: "기계 가동률에 따라 동적으로 전략을 전환합니다. 가동률이 낮으면 짧은 작업(SPT)을, 가동률이 높으면 긴 작업(LPT)을 우선 처리합니다.",
+    formula: "if utilization < target(0.8):\n    priority = −PT   ← SPT (기계를 바쁘게)\nelse:\n    priority = +PT   ← LPT (긴 작업으로 채움)",
+    formulaKr: "가동률이 낮으면 처리 속도 우선, 높으면 대형 작업으로 효율 극대화.",
+    vars: ["machine_utilization", "processing_time"],
+    pros: ["기계 가동률을 동적으로 반응", "자원 활용률 최적화"],
+    cons: ["가동률 임계값(0.8) 설정에 민감", "납기일 고려 없음"],
+    useCases: "기계 활용률 최대화가 목표인 환경, S1 부품 지연 시나리오에서 유용",
+  },
+  B10: {
+    fullName: "ATCS (명백 지연 비용, Apparent Tardiness Cost with Setup)",
+    summary: "처리 시간이 짧고 여유가 없는 작업에 높은 점수를 부여합니다. 슬랙이 0에 가까울수록 지수적으로 우선순위가 높아집니다.",
+    formula: "slack = max(0, due_date − current_time − remaining_pt)\npriority = (1/PT) × exp(−slack / (k₁ × avg_PT))\nk₁ = 2.0",
+    formulaKr: "처리 시간 짧을수록 + 슬랙 없을수록 → 지수적으로 우선순위 상승.",
+    vars: ["due_date", "current_time", "remaining_pt", "processing_time", "avg_processing_time"],
+    pros: ["납기 긴박도를 지수 함수로 민감하게 반영", "여러 지표를 하나의 점수로 통합", "문헌에서 성능이 검증된 규칙"],
+    cons: ["avg_processing_time 추정 필요", "k₁ 파라미터 튜닝 필요", "계산이 다소 복잡"],
+    useCases: "납기 지연 비용이 큰 정밀 제조 환경, 전반적으로 가장 강력한 기본 규칙",
+  },
+};
+
+// ──────────────────────────────────────────────────────────────────
+// 규칙 탐색기 상태
+// ──────────────────────────────────────────────────────────────────
+let allRules    = [];
+let monacoEditor = null;
+let currentCode  = '';
+
+require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' }});
+require(['vs/editor/editor.main'], function() {
+  monacoEditor = monaco.editor.create(document.getElementById('monaco-container'), {
+    value: '# 왼쪽 패널에서 규칙을 선택해 주세요',
+    language: 'python', theme: 'vs-dark', readOnly: true,
+    minimap: { enabled: false }, fontSize: 13, lineHeight: 20,
+    scrollBeyondLastLine: false, wordWrap: 'on',
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────
+// 로드 & 렌더
+// ──────────────────────────────────────────────────────────────────
+async function loadRules() {
+  const d = await API.get('/api/rules');
+  if (!d.ok) return;
+  allRules = d.data;
+  renderRuleList(allRules);
+}
+
+function renderRuleList(rules) {
+  const container = document.getElementById('rule-list');
+  if (!rules.length) {
+    container.innerHTML = '<div class="text-center text-muted p-4">규칙을 찾을 수 없습니다.</div>';
+    return;
+  }
+  container.innerHTML = rules.map((r, i) => {
+    const isBase   = r.type === 'baseline';
+    const typeColor = isBase ? 'var(--accent)' : 'var(--purple)';
+    const icon      = isBase ? 'fa-cog'        : 'fa-dna';
+    const subLabel  = isBase
+      ? (BASELINE_DESC[r.rule_id]?.fullName.split('(')[0].trim() || '기본 규칙')
+      : `LLM 생성 · ${r.generation}세대`;
+    return `<div class="rule-list-item" id="rl-${i}" onclick="selectRule(${i})">
+      <i class="fa ${icon}" style="color:${typeColor};width:16px;text-align:center;flex-shrink:0"></i>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600">${r.rule_id}</div>
+        <div class="small text-muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${subLabel}</div>
+      </div>
+      ${r.avg_at != null ? `<span class="small text-secondary" style="flex-shrink:0">AT ${fmt(r.avg_at)}</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function filterRules(q) {
+  const lower = q.toLowerCase();
+  const filtered = allRules.filter(r =>
+    r.rule_id.toLowerCase().includes(lower) ||
+    (r.type||'').toLowerCase().includes(lower) ||
+    (BASELINE_DESC[r.rule_id]?.fullName || '').toLowerCase().includes(lower)
+  );
+  renderRuleList(filtered);
+}
+
+// ──────────────────────────────────────────────────────────────────
+// 규칙 선택 → 설명 + 코드 표시
+// ──────────────────────────────────────────────────────────────────
+function selectRule(idx) {
+  document.querySelectorAll('.rule-list-item').forEach(el => el.classList.remove('selected'));
+  document.getElementById(`rl-${idx}`)?.classList.add('selected');
+
+  const r = allRules[idx];
+  if (!r) return;
+
+  document.getElementById('rule-placeholder').style.display = 'none';
+  document.getElementById('rule-detail').style.display = 'block';
+
+  // ── 헤더 ──
+  document.getElementById('rd-title').textContent = r.rule_id;
+
+  const badge = document.getElementById('rd-type-badge');
+  badge.textContent  = r.type === 'baseline' ? '기본 규칙' : 'LLM 생성';
+  badge.className    = `badge ms-2 ${r.type==='baseline' ? 'badge-baseline' : 'badge-llm'}`;
+
+  const nameBadge = document.getElementById('rd-name-badge');
+  const desc = BASELINE_DESC[r.rule_id];
+  nameBadge.textContent = desc ? desc.fullName.split('(')[0].trim() : (r.operator_kr || r.operator || '');
+  nameBadge.style.display = nameBadge.textContent ? '' : 'none';
+
+  // 메타 칩
+  const chips = [
+    `<span class="meta-chip">세대: ${r.generation}</span>`,
+    `<span class="meta-chip">생성 방식: ${r.operator_kr || r.operator || '—'}</span>`,
+  ];
+  if (r.parents?.length)
+    chips.push(`<span class="meta-chip">부모 규칙: ${r.parents.join(', ')}</span>`);
+  if (r.avg_at != null && isFinite(r.avg_at))
+    chips.push(`<span class="meta-chip">평가 AT: ${fmt(r.avg_at)}</span>`);
+  document.getElementById('rd-meta').innerHTML = chips.join('');
+
+  // ── 설명 패널 ──
+  renderDescription(r);
+
+  // ── 코드 ──
+  const code  = r.code || `# 내장 규칙: ${r.rule_id}\n# 기본 규칙의 소스 코드는 표시되지 않습니다.`;
+  currentCode = code;
+  document.getElementById('rd-lines').textContent = `${code.split('\n').length}줄`;
+  if (monacoEditor) { monacoEditor.setValue(code); monacoEditor.revealLine(1); }
+
+  // ── 계보 ──
+  const lineageCard = document.getElementById('rd-lineage-card');
+  if (r.parents?.length) {
+    lineageCard.style.display = 'block';
+    document.getElementById('rd-lineage').innerHTML =
+      r.parents.map(p => `<span class="badge badge-baseline me-1">${p}</span>`).join(' → ') +
+      ` → <span class="badge badge-llm">${r.rule_id}</span>`;
+  } else {
+    lineageCard.style.display = 'none';
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────
+// 설명 렌더러
+// ──────────────────────────────────────────────────────────────────
+function renderDescription(r) {
+  const el = document.getElementById('rd-desc-content');
+
+  if (BASELINE_DESC[r.rule_id]) {
+    el.innerHTML = renderBaselineDesc(BASELINE_DESC[r.rule_id]);
+  } else {
+    el.innerHTML = renderLLMDesc(r);
+  }
+}
+
+function renderBaselineDesc(d) {
+  const pros = (d.pros || []).map(p =>
+    `<div class="pc-item"><i class="fa fa-check pc-icon" style="color:var(--green)"></i><span>${p}</span></div>`
+  ).join('');
+  const cons = (d.cons || []).map(c =>
+    `<div class="pc-item"><i class="fa fa-xmark pc-icon" style="color:var(--red)"></i><span>${c}</span></div>`
+  ).join('');
+  const vars = (d.vars || []).map(v => `<span class="var-badge">${v}</span>`).join('');
+
+  return `
+    <div class="desc-block mb-3">
+      <div class="desc-label">알고리즘 개요</div>
+      <div style="color:var(--text-primary);line-height:1.6">${d.summary}</div>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <div class="desc-label">수식 / 판단 기준</div>
+        <div class="desc-formula" style="white-space:pre-line">${d.formula}</div>
+        <div class="small text-muted mt-1">${d.formulaKr}</div>
+      </div>
+      <div class="col-md-6">
+        <div class="desc-label">사용 입력 변수</div>
+        <div class="mt-1">${vars}</div>
+        ${d.useCases ? `
+        <div class="desc-label mt-3">추천 사용 환경</div>
+        <div class="small" style="color:var(--text-secondary)">${d.useCases}</div>` : ''}
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="desc-label">장점</div>
+        <div class="pros-cons">${pros}</div>
+      </div>
+      <div class="col-md-6">
+        <div class="desc-label">단점</div>
+        <div class="pros-cons">${cons}</div>
+      </div>
+    </div>`;
+}
+
+function renderLLMDesc(r) {
+  const code = r.code || '';
+  const isHx = !!(r.is_heuristix || (r.rule_id||'').startsWith('heuristiX') || (r.type||'').startsWith('heuristiX'));
+
+  // 변수 사용 분석 — DSL 짧은 이름까지 포함
+  const ALL_VARS = [
+    // 표준
+    'release_time','due_date','remaining_pt','processing_time',
+    'urgent_order_flag','part_available_time','current_time',
+    'machine_id','avg_processing_time','machine_utilization','machine_workloads',
+    'machine_available_time','eligible_machines',
+    // DSL 짧은 이름
+    'release','due','proc','remaining_proc','part_avail','urgent',
+    'slack','penalty','total_proc','now','machine_queue','mach_util',
+    'n_ready','n_running','n_jobs','op_idx','time_to_avail',
+  ];
+  const usedVars = [...new Set(ALL_VARS.filter(v => new RegExp(`\\b${v}\\b`).test(code)))];
+  const vars = usedVars.map(v => `<span class="var-badge">${v}</span>`).join('');
+
+  // 코드 구조 분석 — Python + DSL 양쪽 인식
+  const condCount = (code.match(/\bif\b|\belif\b|\biff\s*\(|\bgt\s*\(|\blt\s*\(|\beq\s*\(/g) || []).length;
+  const loopCount = (code.match(/\bfor\b|\bwhile\b/g) || []).length;
+  const mathOps   = (code.match(/\bmath\.\w+|\bexp_\s*\(|\bmax_\s*\(|\bmin_\s*\(|\bclamp\s*\(|\babs\b|\bsqrt\b/g) || []).length;
+  const lineCount = code.split('\n').filter(l => l.trim() && !l.trim().startsWith('#')).length;
+  const charCount = code.length;
+  const usesExp   = /\bexp_\s*\(/.test(code);
+  const usesIff   = /\biff\s*\(/.test(code);
+
+  // 외부 변수 감지
+  const usesUrgent = /\b(urgent_order_flag|urgent)\b/.test(code);
+  const usesPart   = /\b(part_available_time|part_avail|time_to_avail)\b/.test(code);
+  const usesUtil   = /\b(machine_utilization|mach_util)\b/.test(code);
+  const usesDue    = /\b(due_date|due|slack)\b/.test(code);
+  const usesProc   = /\b(processing_time|proc|remaining_pt|remaining_proc|total_proc)\b/.test(code);
+
+  const operatorDescMap = {
+    // EoH 진화 연산자
+    E1: '기존 규칙에서 일부 파라미터나 로직을 무작위로 변형한 규칙입니다.',
+    E2: '두 부모 규칙의 코드 구조를 교차 결합하여 생성된 규칙입니다.',
+    M1: '기존 규칙의 성능을 분석한 후, LLM이 개선 방향을 스스로 반성(Reflection)하여 수정한 규칙입니다.',
+    M2: '기존 규칙의 복잡한 로직을 단순화·정리하여 생성된 규칙입니다.',
+    LLM_INIT: 'LLM이 시나리오 설명만을 바탕으로 처음부터 새로 생성한 초기 규칙입니다.',
+    BASELINE: '사람이 직접 설계한 기본 규칙입니다.',
+    // heuristiX 변형 (P1/P2/P3) — 실험설계서 §5-2
+    P1: 'heuristiX P1 변형: LLM에게 외부 충격 변수(긴급/부품지연)를 노출하지 않은 채 진화시켰습니다. 충격이 발생해도 그것을 모르고 일반 dispatching만 학습하는 baseline.',
+    P2: 'heuristiX P2 변형: LLM에게 외부 충격 변수(urgent_order_flag, part_available_time)를 노출하고 진화시켰습니다. 충격을 인지해서 대응 가능한 규칙.',
+    P3: 'heuristiX P3 변형: P2와 동일하게 충격 변수를 노출하고, 추가로 진화 과정에서 성공/실패 경험을 메모리에 누적·재활용합니다. 가장 정교한 변형.',
+  };
+  const opDesc = operatorDescMap[r.operator] || 'LLM이 생성한 규칙입니다.';
+
+  // heuristiX summary 추출
+  const s = r.summary || {};
+  const sTrain = r.scenario_trained_on || '';
+  const iTrain = r.instance_trained_on || '';
+  const flexLabel = {
+    'synth12x6_flex00': 'strict JSSP (flex=0.0)',
+    'synth12x6_flex05': 'moderate FJSSP (flex=0.5)',
+    'synth12x6_flex10': 'full FJSSP (flex=1.0)',
+  }[iTrain] || iTrain;
+
+  return `
+    <div class="desc-block mb-3">
+      <div class="desc-label">생성 방식</div>
+      <div style="color:var(--text-primary);line-height:1.6">${opDesc}</div>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <div class="desc-label">코드 구조 분석</div>
+        <table class="table table-sm mb-0 mt-1" style="font-size:12px">
+          <tbody>
+            <tr><td class="text-muted">유효 코드 라인</td><td><strong>${lineCount}줄</strong></td></tr>
+            <tr><td class="text-muted">조건 분기 (if/elif)</td><td><strong>${condCount}개</strong></td></tr>
+            <tr><td class="text-muted">반복문 (for/while)</td><td><strong>${loopCount}개</strong></td></tr>
+            <tr><td class="text-muted">수학 연산 (math.*)</td><td><strong>${mathOps}개</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="col-md-6">
+        <div class="desc-label">사용 입력 변수 (${usedVars.length}개)</div>
+        <div class="mt-1">${vars || '<span class="text-muted small">변수 감지 불가</span>'}</div>
+        ${usesUrgent || usesPart || usesUtil ? `
+        <div class="mt-2 p-2 rounded" style="background:#1f3a5f20;border:1px solid #1f6feb40">
+          <span class="small" style="color:var(--accent)">
+            <i class="fa fa-circle-info me-1"></i>외부 disruption 변수 활용
+            ${usesUrgent ? '<span class="badge badge-llm ms-1">긴급 플래그</span>' : ''}
+            ${usesPart   ? '<span class="badge badge-llm ms-1">부품 가용 시간</span>' : ''}
+            ${usesUtil   ? '<span class="badge badge-llm ms-1">기계 가동률</span>' : ''}
+          </span>
+        </div>` : ''}
+        ${usesDue || usesProc ? `
+        <div class="mt-2 p-2 rounded" style="background:#1a3a1a30;border:1px solid #2f855a40">
+          <span class="small" style="color:#9ae6b4">
+            <i class="fa fa-check me-1"></i>기본 스케줄링 변수 활용
+            ${usesDue  ? '<span class="badge bg-success ms-1">납기/여유</span>' : ''}
+            ${usesProc ? '<span class="badge bg-success ms-1">처리시간/남은작업</span>' : ''}
+          </span>
+        </div>` : ''}
+        ${usesExp || usesIff ? `
+        <div class="mt-2 p-2 rounded" style="background:#3a1a3a30;border:1px solid #9f7aea40">
+          <span class="small" style="color:#d6bcfa">
+            <i class="fa fa-cogs me-1"></i>비선형 결합
+            ${usesExp ? '<span class="badge ms-1" style="background:#9f7aea">지수 함수</span>' : ''}
+            ${usesIff ? '<span class="badge ms-1" style="background:#9f7aea">조건 분기</span>' : ''}
+          </span>
+        </div>` : ''}
+      </div>
+    </div>
+
+    ${isHx ? `
+    <div class="desc-block mb-3">
+      <div class="desc-label">heuristiX 학습 환경</div>
+      <div class="row g-2 mt-1" style="font-size:13px">
+        <div class="col-md-4">
+          <div class="text-muted small">학습 시나리오</div>
+          <div><strong>${sTrain || '—'}</strong> ${sTrain==='S0'?'정상':sTrain==='S1'?'부품 지연':sTrain==='S2'?'긴급 주문':''}</div>
+        </div>
+        <div class="col-md-4">
+          <div class="text-muted small">학습 인스턴스</div>
+          <div><strong>${flexLabel || '—'}</strong></div>
+        </div>
+        <div class="col-md-4">
+          <div class="text-muted small">학습 성능 (AT)</div>
+          <div><strong>${s.mean != null ? s.mean.toFixed(2) : '—'}</strong> ± ${s.std != null ? s.std.toFixed(2) : '—'}</div>
+        </div>
+        <div class="col-md-4">
+          <div class="text-muted small">학습 시 ARI</div>
+          <div class="${s.ari > 0 ? 'text-success' : (s.ari < 0 ? 'text-danger' : '')}">
+            <strong>${s.ari != null ? (s.ari >= 0 ? '+' : '') + s.ari.toFixed(1) + '%' : '—'}</strong>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="text-muted small">학습 시 PTJ</div>
+          <div><strong>${s.ptj != null ? s.ptj.toFixed(1) + '%' : '—'}</strong></div>
+        </div>
+        <div class="col-md-4">
+          <div class="text-muted small">학습 시 MIT</div>
+          <div><strong>${s.mit != null ? s.mit.toFixed(0) : '—'}</strong></div>
+        </div>
+      </div>
+      <div class="small text-muted mt-2">
+        <i class="fa fa-circle-info me-1"></i>이 metric은 heuristiX_v2 (Rust 시뮬레이터) 환경에서 측정. 아래 카드에서 dashboard 시뮬레이터로 재현 가능.
+      </div>
+    </div>` : ''}
+
+    ${r.parents?.length ? `
+    <div class="desc-block">
+      <div class="desc-label">부모 규칙</div>
+      <div class="mt-1">
+        ${r.parents.map(p => {
+          const pd = BASELINE_DESC[p];
+          return `<span class="badge badge-baseline me-1" title="${pd ? pd.fullName : ''}">${p}</span>`;
+        }).join(' + ')}
+        <span class="text-muted small ms-2">→ ${r.rule_id}</span>
+      </div>
+    </div>` : ''}`;
+}
+
+function copyCode() {
+  navigator.clipboard.writeText(currentCode)
+    .then(() => toast('코드가 클립보드에 복사되었습니다!', 'success'));
+}
+
+// 현재 선택된 규칙 자연어 설명 호출
+let _currentRule = null;
+const _origSelectRule = selectRule;
+selectRule = function(idx) {
+  _origSelectRule(idx);
+  _currentRule = allRules[idx];
+  // NL 카드 표시 + 초기화
+  const card = document.getElementById('rd-nl-card');
+  const content = document.getElementById('rd-nl-content');
+  if (card && content) {
+    card.style.display = 'block';
+    content.innerHTML = `<button class="btn btn-sm btn-primary" onclick="explainCurrentRule()">
+      <i class="fa fa-language me-1"></i>자연어로 설명 보기
+    </button>`;
+  }
+  // heuristiX 규칙이면 실행 카드 표시
+  const hxCard = document.getElementById('rd-hx-card');
+  const hxResult = document.getElementById('hx-result');
+  if (hxCard) {
+    const isHx = _currentRule && (_currentRule.is_heuristix || (_currentRule.rule_id||'').startsWith('heuristiX'));
+    hxCard.style.display = isHx ? 'block' : 'none';
+    if (isHx && hxResult) hxResult.innerHTML = '';
+    // 학습된 시나리오·인스턴스가 있으면 기본값으로
+    if (isHx && _currentRule) {
+      const sc = _currentRule.scenario_trained_on;
+      const inst = _currentRule.instance_trained_on;
+      if (sc) document.getElementById('hx-scenario').value = sc;
+      if (inst) {
+        const sel = document.getElementById('hx-instance');
+        for (const o of sel.options) if (o.value === inst) { sel.value = inst; break; }
+      }
+    }
+  }
+};
+
+async function runCurrentHxRule() {
+  if (!_currentRule) return;
+  const body = {
+    rule_id: _currentRule.rule_id,
+    instance: document.getElementById('hx-instance').value,
+    family: 'custom',
+    scenario: document.getElementById('hx-scenario').value,
+    n_seeds: parseInt(document.getElementById('hx-seeds').value || '20', 10),
+  };
+  const resultEl = document.getElementById('hx-result');
+  resultEl.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i>시뮬레이션 중...';
+  try {
+    const r = await fetch('/api/heuristix/run', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const j = await r.json();
+    if (!j.ok) { resultEl.innerHTML = `<div class="text-danger">${j.error || '실패'}</div>`; return; }
+    const tid = j.task_id;
+    // poll
+    let last = null;
+    for (let i = 0; i < 60; i++) {
+      await new Promise(res => setTimeout(res, 2000));
+      const tr = await fetch(`/api/tasks/${tid}`).then(r => r.json());
+      const d = tr.data || {};
+      last = d;
+      if (d.status === 'completed' || d.status === 'error') break;
+    }
+    if (!last || last.status !== 'completed') {
+      resultEl.innerHTML = `<div class="text-warning">미완료: ${last?.status||'unknown'}</div>`;
+      return;
+    }
+    const rs = last.result?.result || {};
+    const ari = rs.ari ?? null;
+    const ariStr = ari === null ? '—' : `${ari >= 0 ? '+' : ''}${ari.toFixed(1)}%`;
+    const ariColor = ari === null ? '' : (ari > 0 ? 'text-success' : (ari < -2 ? 'text-danger' : 'text-warning'));
+    resultEl.innerHTML = `
+      <div class="row g-2">
+        <div class="col-md-3"><div class="text-muted small">AT (평균)</div><div><strong>${rs.mean?.toFixed(2) ?? '—'}</strong> ± ${rs.std?.toFixed(2) ?? '—'}</div></div>
+        <div class="col-md-3"><div class="text-muted small">PTJ</div><div><strong>${rs.ptj?.toFixed(1) ?? '—'}%</strong></div></div>
+        <div class="col-md-3"><div class="text-muted small">MIT</div><div><strong>${rs.mit?.toFixed(0) ?? '—'}</strong></div></div>
+        <div class="col-md-3"><div class="text-muted small">ARI vs best baseline</div><div class="${ariColor}"><strong>${ariStr}</strong></div></div>
+      </div>
+      ${rs.best_baseline_at ? `<div class="text-muted mt-2">최고 baseline AT: ${rs.best_baseline_at.toFixed(2)}</div>` : ''}
+      <div class="text-muted mt-1">학습 환경: ${rs.scenario_trained_on}/${rs.instance_trained_on}</div>
+    `;
+  } catch (e) {
+    resultEl.innerHTML = `<div class="text-danger">오류: ${e}</div>`;
+  }
+}
+
+async function explainCurrentRule() {
+  if (!_currentRule) { toast('규칙을 먼저 선택하세요','warning'); return; }
+  const content = document.getElementById('rd-nl-content');
+  content.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i>AI가 규칙을 분석 중...';
+  try {
+    const r = await fetch('/api/rule/explain', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        code: _currentRule.code || '',
+        rule_id: _currentRule.rule_id || '',
+        context: {scenario: '', }
+      })
+    });
+    const d = await r.json();
+    if (!d.ok) { content.innerHTML = `<div class="text-danger small">${d.error}</div>`; return; }
+    const v = (d.variables_used || []).map(x => `<span class="var-badge">${x}</span>`).join(' ');
+    content.innerHTML = `
+      <div class="mb-2"><strong>한 줄 요약:</strong> ${d.summary || '—'}</div>
+      <div class="mb-2"><strong>직관:</strong> <span style="color:var(--text-secondary)">${d.intuition || '—'}</span></div>
+      <div class="mb-2"><strong>핵심 변수:</strong> ${v || '—'}</div>
+      <div class="row g-2 mt-2">
+        <div class="col-md-6">
+          <div class="p-2 rounded" style="background:#1a3a1a30;border:1px solid #2f855a40">
+            <div class="small" style="color:#9ae6b4"><i class="fa fa-check me-1"></i>강한 상황</div>
+            <div class="small mt-1">${d.when_strong || '—'}</div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="p-2 rounded" style="background:#3a1a1a30;border:1px solid #c5303040">
+            <div class="small" style="color:#feb2b2"><i class="fa fa-triangle-exclamation me-1"></i>약한 상황</div>
+            <div class="small mt-1">${d.when_weak || '—'}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    content.innerHTML = `<div class="text-danger small">${e}</div>`;
+  }
+}
+
+loadRules();
+</script>
+{% endblock %}

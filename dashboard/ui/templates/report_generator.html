@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}보고서 생성{% endblock %}
+{% block page_title %}보고서 생성{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="wb-card">
+      <div class="wb-card-header">
+        <i class="fa fa-file-lines text-accent"></i>
+        <span class="wb-card-title">보고서 설정</span>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">패밀리</label>
+        <select id="rg-family" class="form-select form-select-sm" onchange="onFamilyChange()"></select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">벤치마크 인스턴스</label>
+        <select id="rg-instance" class="form-select form-select-sm" onchange="saveSelection()"></select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">시나리오</label>
+        <select id="rg-scenario" class="form-select form-select-sm">
+          <option value="S0">S0 — 정상 운영</option>
+          <option value="S1">S1 — 부품 지연</option>
+          <option value="S2">S2 — 긴급 주문</option>
+        </select>
+      </div>
+
+      <hr style="border-color:var(--border)">
+      <div class="wb-card-subtitle mb-2">포함 섹션 선택</div>
+      <div class="mb-3">
+        <label class="d-flex align-items-center gap-2 mb-2">
+          <input type="checkbox" class="form-check-input" id="sec-benchmark" checked>
+          벤치마크 정보
+        </label>
+        <label class="d-flex align-items-center gap-2 mb-2">
+          <input type="checkbox" class="form-check-input" id="sec-scenario" checked>
+          시나리오 설정
+        </label>
+        <label class="d-flex align-items-center gap-2 mb-2">
+          <input type="checkbox" class="form-check-input" id="sec-baselines" checked>
+          기본 규칙 성능
+        </label>
+        <label class="d-flex align-items-center gap-2 mb-2">
+          <input type="checkbox" class="form-check-input" id="sec-evolution" checked>
+          진화 결과 <span class="badge bg-secondary ms-1" style="font-size:9px">개선 의미 + 자연어 설명 포함</span>
+        </label>
+        <label class="d-flex align-items-center gap-2 mb-2">
+          <input type="checkbox" class="form-check-input" id="sec-summary" checked>
+          요약
+        </label>
+        <label class="d-flex align-items-center gap-2">
+          <input type="checkbox" class="form-check-input" id="opt-nl" checked>
+          <span class="text-info"><i class="fa fa-language"></i> 규칙 자연어 설명 (LLM 호출)</span>
+        </label>
+      </div>
+
+      <hr style="border-color:var(--border)">
+      <div class="wb-card-subtitle mb-2">내보내기 형식</div>
+      <div class="d-flex gap-2 mb-3">
+        <button class="btn btn-primary flex-1" onclick="generateReport('markdown')">
+          <i class="fa fa-file-code me-1"></i>Markdown
+        </button>
+        <button class="btn btn-outline-secondary flex-1" onclick="generateReport('pdf')">
+          <i class="fa fa-file-pdf me-1"></i>PDF
+        </button>
+        <button class="btn btn-outline-secondary flex-1" onclick="generateReport('docx')">
+          <i class="fa fa-file-word me-1"></i>DOCX
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="wb-card">
+      <div class="wb-card-header">
+        <i class="fa fa-eye text-accent"></i>
+        <span class="wb-card-title">보고서 미리보기</span>
+        <button class="btn btn-sm btn-icon ms-auto" onclick="refreshPreview()" title="미리보기 새로고침">
+          <i class="fa fa-refresh"></i>
+        </button>
+      </div>
+      <div id="rg-loading" style="display:none" class="text-center p-3 text-muted">
+        <i class="fa fa-spinner fa-spin me-2"></i>보고서 생성 중...
+      </div>
+      <div id="rg-preview" class="p-3"
+           style="background:var(--bg-surface); border-radius:8px; min-height:400px; max-height:600px; overflow-y:auto; font-family:monospace; font-size:12px; white-space:pre-wrap; color:var(--text-secondary)">
+# 보고서 미리보기
+
+왼쪽에서 설정을 선택하고 Markdown 버튼을 클릭하면 미리보기가 표시됩니다.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let _allBenchmarks = {};
+
+function saveSelection() {
+  const f = document.getElementById('rg-family').value;
+  const i = document.getElementById('rg-instance').value;
+  if (f) localStorage.setItem('fjssp_family', f);
+  if (i) localStorage.setItem('fjssp_instance', i);
+}
+
+function onFamilyChange() {
+  const family = document.getElementById('rg-family').value;
+  const instances = _allBenchmarks[family] || [];
+  const saved = localStorage.getItem('fjssp_instance');
+  document.getElementById('rg-instance').innerHTML =
+    instances.map(n => `<option value="${n}"${n===saved?' selected':''}>${n.toUpperCase()}</option>`).join('');
+  saveSelection();
+}
+
+async function loadInstances() {
+  const d = await API.get('/api/benchmarks');
+  if (!d.ok) return;
+  _allBenchmarks = d.data;
+  const savedFamily = localStorage.getItem('fjssp_family');
+  const families = Object.keys(d.data);
+  const selFamily = families.includes(savedFamily) ? savedFamily : families[0];
+  document.getElementById('rg-family').innerHTML =
+    families.map(f => `<option value="${f}"${f===selFamily?' selected':''}>${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join('');
+  onFamilyChange();
+}
+
+function getSections() {
+  const ids = ['benchmark','scenario','baselines','evolution','summary'];
+  return ids.filter(id => document.getElementById(`sec-${id}`)?.checked);
+}
+
+async function generateReport(format) {
+  const body = {
+    format,
+    instance: document.getElementById('rg-instance').value,
+    family:   document.getElementById('rg-family').value,
+    scenario: document.getElementById('rg-scenario').value,
+    sections: getSections(),
+    include_nl: document.getElementById('opt-nl')?.checked ?? true,
+  };
+
+  document.getElementById('rg-loading').style.display = 'block';
+  setStatus('보고서 생성 중...', 'warning');
+
+  if (format === 'markdown') {
+    const r = await fetch('/api/report/generate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    document.getElementById('rg-loading').style.display = 'none';
+    if (!r.ok) { const e = await r.json(); toast(e.error,'error'); return; }
+
+    const blob = await r.blob();
+    const text = await blob.text();
+    document.getElementById('rg-preview').textContent = text;
+    setStatus('준비','success');
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text],{type:'text/markdown'}));
+    a.download = `fjssp_보고서_${body.instance}_${body.scenario}.md`;
+    a.click();
+    toast('보고서 다운로드 완료!', 'success');
+
+  } else {
+    const r = await fetch('/api/report/generate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    document.getElementById('rg-loading').style.display = 'none';
+    setStatus('준비','success');
+
+    if (!r.ok) {
+      const e = await r.json().catch(()=>({}));
+      toast(e.error || '내보내기 실패', 'error'); return;
+    }
+    const blob = await r.blob();
+    const ext  = format === 'pdf' ? 'pdf' : 'docx';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `fjssp_보고서_${body.instance}_${body.scenario}.${ext}`;
+    a.click();
+    toast(`${format.toUpperCase()} 다운로드 완료!`, 'success');
+  }
+}
+
+async function refreshPreview() {
+  const body = {
+    format: 'markdown',
+    instance: document.getElementById('rg-instance').value,
+    family:   document.getElementById('rg-family').value,
+    scenario: document.getElementById('rg-scenario').value,
+    sections: getSections(),
+    include_nl: document.getElementById('opt-nl')?.checked ?? true,
+  };
+
+  document.getElementById('rg-loading').style.display = 'block';
+  const r = await fetch('/api/report/generate', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body),
+  });
+  document.getElementById('rg-loading').style.display = 'none';
+  if (!r.ok) return;
+  const text = await r.text();
+  document.getElementById('rg-preview').textContent = text;
+}
+
+loadInstances();
+</script>
+{% endblock %}
