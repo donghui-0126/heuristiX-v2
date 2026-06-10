@@ -85,20 +85,66 @@
       <div id="rg-loading" style="display:none" class="text-center p-3 text-muted">
         <i class="fa fa-spinner fa-spin me-2"></i>보고서 생성 중...
       </div>
-      <div id="rg-preview" class="p-3"
-           style="background:var(--bg-surface); border-radius:8px; min-height:400px; max-height:600px; overflow-y:auto; font-family:monospace; font-size:12px; white-space:pre-wrap; color:var(--text-secondary)">
-# 보고서 미리보기
-
-왼쪽에서 설정을 선택하고 Markdown 버튼을 클릭하면 미리보기가 표시됩니다.
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <div class="btn-group btn-group-sm" role="group">
+          <button id="rg-view-rendered" class="btn btn-primary btn-sm" onclick="setPreviewMode('rendered')">
+            <i class="fa fa-eye me-1"></i>렌더링
+          </button>
+          <button id="rg-view-raw" class="btn btn-outline-secondary btn-sm" onclick="setPreviewMode('raw')">
+            <i class="fa fa-code me-1"></i>원문
+          </button>
+        </div>
       </div>
+      <div id="rg-preview" class="p-3 md-preview"
+           style="background:var(--bg-surface); border-radius:8px; min-height:400px; max-height:600px; overflow-y:auto">
+        <p class="text-muted">왼쪽에서 설정을 선택하고 <b>Markdown</b> 버튼 또는 새로고침 아이콘을 클릭하면 미리보기가 표시됩니다.</p>
+      </div>
+      <style>
+        .md-preview { font-size: 13px; line-height: 1.65; color: var(--text-primary); }
+        .md-preview h1 { font-size: 19px; border-bottom: 1px solid var(--border); padding-bottom: 6px; margin: 10px 0; }
+        .md-preview h2 { font-size: 16px; margin: 16px 0 8px; color: var(--accent); }
+        .md-preview h3 { font-size: 14px; margin: 12px 0 6px; }
+        .md-preview table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 12px; }
+        .md-preview th, .md-preview td { border: 1px solid var(--border); padding: 4px 9px; text-align: left; }
+        .md-preview th { background: rgba(255,255,255,.05); }
+        .md-preview code { background: rgba(110,118,129,.2); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+        .md-preview pre { background: rgba(110,118,129,.15); padding: 10px; border-radius: 6px; overflow-x: auto; }
+        .md-preview pre code { background: none; padding: 0; }
+        .md-preview blockquote { border-left: 3px solid var(--accent); margin: 8px 0; padding: 4px 12px; color: var(--text-secondary); }
+        .md-preview.raw-mode { font-family: monospace; font-size: 12px; white-space: pre-wrap; color: var(--text-secondary); }
+      </style>
     </div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
 <script>
 let _allBenchmarks = {};
+let _lastMarkdown = '';
+let _previewMode = 'rendered';
+
+function setPreviewMode(mode) {
+  _previewMode = mode;
+  document.getElementById('rg-view-rendered').className =
+    'btn btn-sm ' + (mode === 'rendered' ? 'btn-primary' : 'btn-outline-secondary');
+  document.getElementById('rg-view-raw').className =
+    'btn btn-sm ' + (mode === 'raw' ? 'btn-primary' : 'btn-outline-secondary');
+  renderPreview();
+}
+
+function renderPreview() {
+  const el = document.getElementById('rg-preview');
+  if (!_lastMarkdown) return;
+  if (_previewMode === 'raw') {
+    el.classList.add('raw-mode');
+    el.textContent = _lastMarkdown;
+  } else {
+    el.classList.remove('raw-mode');
+    el.innerHTML = marked.parse(_lastMarkdown);
+  }
+}
 
 function saveSelection() {
   const f = document.getElementById('rg-family').value;
@@ -156,7 +202,7 @@ async function generateReport(format) {
 
     const blob = await r.blob();
     const text = await blob.text();
-    document.getElementById('rg-preview').textContent = text;
+    _lastMarkdown = text; renderPreview();
     setStatus('준비','success');
 
     const a = document.createElement('a');
@@ -205,7 +251,7 @@ async function refreshPreview() {
   document.getElementById('rg-loading').style.display = 'none';
   if (!r.ok) return;
   const text = await r.text();
-  document.getElementById('rg-preview').textContent = text;
+  _lastMarkdown = text; renderPreview();
 }
 
 loadInstances();

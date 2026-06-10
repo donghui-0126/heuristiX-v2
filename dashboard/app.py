@@ -898,12 +898,52 @@ def api_generate_report():
     elif fmt == "pdf":
         try:
             from fpdf import FPDF
+            from fpdf.enums import XPos, YPos
+
+            font_dir = Path(__file__).parent / "ui" / "static" / "fonts"
             pdf = FPDF()
+            pdf.add_font("Pretendard", "",  str(font_dir / "Pretendard-Regular.ttf"))
+            pdf.add_font("Pretendard", "B", str(font_dir / "Pretendard-Bold.ttf"))
             pdf.add_page()
-            pdf.set_font("Helvetica", size=11)
-            for line in md_text.replace("**", "").replace("`", "").splitlines():
-                safe = line.encode("latin-1", "replace").decode("latin-1")
-                pdf.cell(0, 7, safe, ln=True)
+            pdf.set_auto_page_break(auto=True, margin=18)
+            epw = pdf.epw  # effective page width
+
+            def _line(text: str, *, size: int = 10, bold: bool = False,
+                      indent: float = 0.0, fill: bool = False):
+                pdf.set_font("Pretendard", "B" if bold else "", size)
+                if indent:
+                    pdf.set_x(pdf.l_margin + indent)
+                pdf.multi_cell(epw - indent, size * 0.55,
+                               text if text.strip() else " ",
+                               new_x=XPos.LMARGIN, new_y=YPos.NEXT, fill=fill)
+
+            in_code = False
+            for raw in md_text.splitlines():
+                line = raw.rstrip()
+                if line.startswith("```"):
+                    in_code = not in_code
+                    continue
+                if in_code:
+                    pdf.set_fill_color(243, 244, 246)
+                    _line(line or " ", size=8, indent=4, fill=True)
+                    pdf.set_fill_color(255, 255, 255)
+                    continue
+                stripped = line.replace("**", "").replace("`", "")
+                if line.startswith("# "):
+                    pdf.ln(2); _line(stripped[2:], size=17, bold=True); pdf.ln(1)
+                elif line.startswith("## "):
+                    pdf.ln(2); _line(stripped[3:], size=13, bold=True); pdf.ln(1)
+                elif line.startswith("### "):
+                    pdf.ln(1); _line(stripped[4:], size=11, bold=True)
+                elif line.startswith("> "):
+                    _line(stripped[2:], size=9, indent=4)
+                elif line.startswith("|"):
+                    _line(stripped, size=8)
+                elif line.startswith("- "):
+                    _line("• " + stripped[2:], size=10, indent=2)
+                else:
+                    _line(stripped, size=10)
+
             tmp = RESULTS_DIR / "report.pdf"
             pdf.output(str(tmp))
             return send_file(str(tmp), as_attachment=True, download_name="report.pdf",
