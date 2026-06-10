@@ -105,6 +105,9 @@ python3 app.py           # → http://localhost:5000
 4. **진화 센터** — P1/P2/P3 LLM 진화를 브라우저에서 launch
 5. **보고서 생성** — MD/PDF/DOCX, *"작업당 5.5분 덜 늦음"* 식의 실무 환산 포함
 
+📖 **페이지별 상세 사용법: [`dashboard/GUIDE.md`](dashboard/GUIDE.md)** — 처음 10분
+코스부터 전체 실험 사이클·FAQ까지.
+
 ### B. 연구 파이프라인 (Rust 엔진 — 본 실험용)
 
 ```bash
