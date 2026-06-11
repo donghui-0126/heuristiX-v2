@@ -18,10 +18,11 @@ def load_priority_fn(code: str) -> Callable:
     The code must define a function named `priority`.
     Only a restricted set of builtins is available; no imports are allowed.
     """
+    import builtins as _builtins
     import math as _math
 
     ns = {
-        "__builtins__": {k: v for k, v in vars(__builtins__).items()
+        "__builtins__": {k: v for k, v in vars(_builtins).items()
                         if k in _ALLOWED_BUILTINS},
         "math": _math,
     }
