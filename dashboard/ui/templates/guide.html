@@ -45,16 +45,35 @@
     <!-- STEP 1 — 공장 선택 -->
     <div class="wiz-step" data-step="1">
       <div class="wiz-h">1단계 · 공장 선택</div>
-      <div class="wiz-sub">어떤 작업장(벤치마크)을 시뮬레이션할지 고릅니다.</div>
+      <div class="wiz-sub">어떤 가상 공장(벤치마크)을 시뮬레이션할지 고릅니다.</div>
+
+      <details style="background:rgba(88,166,255,.06); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:18px">
+        <summary style="cursor:pointer; font-weight:600; color:var(--accent)">ℹ️ 이 대시보드는 무엇이고, 왜 이런 공장을 쓰나요?</summary>
+        <div class="wiz-sub" style="margin-top:10px; line-height:1.7">
+          <b>목적</b> — 공급망이 흔들리는 상황에서, <b>LLM이 사람 전문가보다 나은 생산 스케줄링 규칙을
+          스스로 찾아낼 수 있는지</b> 실험하는 연구 워크벤치입니다.<br><br>
+          <b>현실 공장의 복잡성을 이렇게 닮았습니다:</b>
+          <table class="wiz-mini" style="width:100%; margin-top:6px">
+            <tr><th>현실</th><th>이 프로젝트</th></tr>
+            <tr><td>주문 → 여러 공정 순서</td><td>작업(job) → 6개 공정(operation)</td></tr>
+            <tr><td>공정마다 가능한 설비가 다름</td><td><b>유연성</b> = 공정당 사용 가능 기계 수</td></tr>
+            <tr><td>고객 납기 / 지연 비용</td><td>납기일 / 평균 지연(AT) 지표</td></tr>
+            <tr><td>부품 입고 지연·긴급 주문</td><td>교란 시나리오 S1·S2</td></tr>
+            <tr><td>현장의 "다음에 뭐 할지" 결정</td><td>디스패칭 규칙(우선순위 함수)</td></tr>
+            <tr><td>전문가가 수개월 튜닝</td><td>LLM이 분 단위로 규칙 진화</td></tr>
+          </table>
+        </div>
+      </details>
+
       <div class="mb-3">
         <label class="form-label">패밀리</label>
         <select id="g-family" class="form-select" onchange="onFamily()"></select>
       </div>
       <div class="mb-3">
-        <label class="form-label">인스턴스</label>
+        <label class="form-label">인스턴스 (공장)</label>
         <select id="g-instance" class="form-select" onchange="onInstance()"></select>
       </div>
-      <div id="g-inst-info" class="wiz-sub"></div>
+      <div id="g-inst-info" class="wiz-result" style="display:none"></div>
     </div>
 
     <!-- STEP 2 — 시나리오 -->
@@ -297,13 +316,29 @@ function onFamily() {
     insts.map(n => `<option value="${n}">${n}</option>`).join('');
   onInstance();
 }
+function describeFactory(info) {
+  const flex = info.flexibility, M = info.n_machines;
+  if (flex <= 1.01)
+    return ['🔒 엄격 (고전 JSSP)',
+      `각 공정이 <b>지정된 1대</b>에서만 가능 — 기계 선택의 여지가 없습니다. 전용 설비 라인 공장에 해당. 스케줄링이 "순서 정하기"로 단순화됩니다.`];
+  if (flex >= M - 0.01)
+    return ['🔀 완전 유연 (Full FJSSP)',
+      `모든 공정을 <b>어느 기계에서나(${M}대 전부)</b> 처리 가능 — 라우팅 자유도가 최대. 범용 기계 셀. 어디에 배치할지 선택지가 폭발적으로 늘어납니다.`];
+  return ['⚙️ 중간 유연 (FJSSP)',
+    `각 공정을 평균 <b>${flex}대 중에서</b> 선택 가능 — 현실 공장에 가장 가깝습니다. "무엇을·어디서" 둘 다 정해야 해서 가장 흥미로운 영역이며, 우리 연구에서 LLM의 강점이 두드러지는 구간입니다.`];
+}
 async function onInstance() {
   W.instance = document.getElementById('g-instance').value;
   const d = await API.get(`/api/benchmark/${W.family}/${W.instance}`);
   if (d.ok) {
     W.instInfo = d.data;
-    document.getElementById('g-inst-info').textContent =
-      `${d.data.n_jobs}작업 · ${d.data.n_machines}기계 · ${d.data.n_operations}오퍼레이션 · 유연성 ${d.data.flexibility}`;
+    const [kind, desc] = describeFactory(d.data);
+    const el = document.getElementById('g-inst-info');
+    el.style.display = 'block';
+    el.innerHTML =
+      `<b>${kind}</b><br>
+       <small>${d.data.n_jobs}개 작업 · ${d.data.n_machines}대 기계 · ${d.data.n_operations}개 공정 · 유연성 ${d.data.flexibility} (공정당 평균 사용 가능 기계 수)</small>
+       <div class="wiz-sub" style="margin-top:8px">${desc}</div>`;
   }
   refreshNext();
 }
