@@ -136,6 +136,7 @@ class EoHEvolution:
         self.ddt                = ddt
         self.seed_offset        = seed_offset
         self.progress_callback  = progress_callback
+        self.n_iter             = N_ITER
         self.eval_seeds         = list(range(seed_offset, seed_offset + N_EVAL))
         self._gen_log: List[GenerationLogEntry] = []
 
@@ -146,17 +147,17 @@ class EoHEvolution:
         history:   List[List[RuleEntry]] = []
         iter_best: List[float] = []
 
-        for iteration in range(1, N_ITER + 1):
+        for iteration in range(1, self.n_iter + 1):
             self._evaluate_pool(pool)
             pool.sort(key=lambda r: r.avg_at)
             survivors       = pool[:N_TOP]
             current_best_at = survivors[0].avg_at
             iter_best.append(current_best_at)
 
-            # 생성 로그에 이번 세대 평가 결과 반영
-            self._update_log_scores(pool, iteration)
+            # 생성 로그에 평가 결과 반영 (직전 세대 생성분이 이번에 평가됨)
+            self._update_log_scores(pool)
 
-            msg = (f"[세대 {iteration:02d}/{N_ITER}] "
+            msg = (f"[세대 {iteration:02d}/{self.n_iter}] "
                    f"최적 AT={current_best_at:.4f}  규칙={survivors[0].rule_id}")
             print(f"  {msg}")
             if self.progress_callback:
@@ -164,7 +165,7 @@ class EoHEvolution:
 
             history.append(deepcopy(survivors))
 
-            if iteration == N_ITER:
+            if iteration == self.n_iter:
                 break
 
             new_rules = self._generate_new_rules(survivors, iteration)
@@ -262,11 +263,15 @@ class EoHEvolution:
         except Exception:
             return float("inf")
 
-    def _update_log_scores(self, pool: List[RuleEntry], iteration: int):
-        """이번 세대에 생성된 로그 항목에 평가 결과 반영."""
-        score_map = {r.rule_id: r.avg_at for r in pool}
+    def _update_log_scores(self, pool: List[RuleEntry]):
+        """평가가 끝난 규칙의 점수를 생성 로그에 반영.
+
+        N세대에 생성된 규칙은 N+1세대 시작 시점에 평가되므로, 세대 번호로
+        필터링하지 않고 현재 풀에서 점수가 확정된 항목을 모두 갱신한다.
+        """
+        score_map = {r.rule_id: r.avg_at for r in pool if r.at_scores}
         for entry in self._gen_log:
-            if entry.iteration == iteration and entry.rule_id in score_map:
+            if entry.rule_id in score_map and entry.avg_at == float("inf"):
                 entry.avg_at = score_map[entry.rule_id]
 
     # ------------------------------------------------------------------
