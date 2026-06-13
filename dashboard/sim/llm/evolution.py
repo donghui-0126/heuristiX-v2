@@ -32,7 +32,7 @@ from .experience import ExperienceStore
 N_ITER      = 20
 POOL_SIZE   = 15
 N_TOP       = 7
-N_EVAL      = 5
+N_EVAL      = 10   # 진화 중 규칙 선택 시드 수. 클수록 과적합↓·일반화↑ (시뮬만 늘어 LLM 비용 불변)
 N_FINAL     = 100
 
 _BASELINE_IDS = ["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10"]
