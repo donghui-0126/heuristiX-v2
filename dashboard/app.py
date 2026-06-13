@@ -154,10 +154,6 @@ def page_results():
 def page_stress():
     return render_template("stress_test.html", active="stress")
 
-@app.route("/similarity-analysis")
-def page_similarity():
-    return render_template("similarity_analysis.html", active="similarity")
-
 @app.route("/memory-center")
 def page_memory():
     return render_template("memory_center.html", active="memory")
@@ -565,71 +561,6 @@ def api_stress_results():
         except Exception:
             pass
     return jsonify({"ok": True, "data": out})
-
-
-# ---------------------------------------------------------------------------
-# API — Similarity Analysis
-# ---------------------------------------------------------------------------
-
-@app.route("/api/similarity", methods=["POST"])
-def api_similarity():
-    body = request.json or {}
-    include_llm_file = body.get("evolution_file")
-
-    rules: Dict[str, str] = {}
-    for bid, fn in BASELINE_RULES.items():
-        try:
-            rules[bid] = inspect.getsource(fn)
-        except Exception:
-            rules[bid] = f"# {bid}"
-
-    if include_llm_file:
-        path = RESULTS_DIR / include_llm_file
-        if path.exists():
-            d = json.loads(path.read_text(encoding="utf-8"))
-            best = d.get("best_rule", {})
-            if best.get("code"):
-                rules[best.get("rule_id", "LLM_best")] = best["code"]
-            for snap in d.get("pool_snapshots", [])[-1:]:
-                for r in snap:
-                    if r.get("code"):
-                        rules[r["rule_id"]] = r["code"]
-
-    try:
-        from sklearn.feature_extraction.text import TfidfVectorizer
-        from sklearn.metrics.pairwise import cosine_similarity
-        from sklearn.decomposition import PCA
-        from sklearn.manifold import TSNE
-    except ImportError:
-        return jsonify({"ok": False, "error": "scikit-learn not installed"}), 500
-
-    ids = list(rules.keys())
-    texts = [rules[i] for i in ids]
-    vec = TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 5))
-    X = vec.fit_transform(texts).toarray()
-    sim_matrix = cosine_similarity(X).tolist()
-
-    pca2 = PCA(n_components=2)
-    coords_pca = pca2.fit_transform(X).tolist()
-
-    n = len(ids)
-    perp = min(5, n - 1) if n > 2 else 1
-    tsne_coords: List[List[float]] = []
-    if n >= 3:
-        tsne2 = TSNE(n_components=2, perplexity=perp, random_state=42)
-        tsne_coords = tsne2.fit_transform(X).tolist()
-    else:
-        tsne_coords = coords_pca
-
-    return jsonify({
-        "ok": True,
-        "data": {
-            "ids": ids,
-            "similarity_matrix": sim_matrix,
-            "pca": coords_pca,
-            "tsne": tsne_coords,
-        }
-    })
 
 
 # ---------------------------------------------------------------------------

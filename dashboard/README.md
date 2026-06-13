@@ -6,7 +6,7 @@ FJSSP(Flexible Job Shop Scheduling Problem) 시뮬레이션 및 LLM 기반 규�
 
 ```bash
 # 1. 패키지 설치
-pip install flask numpy scikit-learn openai fpdf2 python-docx
+pip install -r requirements.txt
 
 # 2. 환경변수 설정 (.env 파일 생성)
 echo OPENAI_API_KEY=sk-... > .env
