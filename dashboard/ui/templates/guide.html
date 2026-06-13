@@ -61,12 +61,38 @@
     <div class="wiz-step" data-step="2" style="display:none">
       <div class="wiz-h">2단계 · 상황(시나리오) 설정</div>
       <div class="wiz-sub">어떤 공급망 교란 상황에서 테스트할지 정합니다.</div>
-      <div class="wiz-pick mb-3">
-        <div class="wiz-opt" data-scn="S0" onclick="pickScn('S0')"><b>S0 정상</b><small>교란 없음 (기준)</small></div>
-        <div class="wiz-opt sel" data-scn="S1" onclick="pickScn('S1')"><b>S1 부품 지연</b><small>일부 부품 입고 지연</small></div>
-        <div class="wiz-opt" data-scn="S2" onclick="pickScn('S2')"><b>S2 긴급 주문</b><small>도중 긴급 작업 삽입</small></div>
+
+      <div class="btn-group btn-group-sm mb-3" role="group">
+        <button id="m2-manual" class="btn btn-primary btn-sm" onclick="setScnMode('manual')">직접 설정</button>
+        <button id="m2-event" class="btn btn-outline-secondary btn-sm" onclick="setScnMode('event')">🌐 현실 이벤트로 생성</button>
       </div>
-      <div id="scn-params"></div>
+
+      <!-- 직접 설정 -->
+      <div id="scn-manual">
+        <div class="wiz-pick mb-3">
+          <div class="wiz-opt" data-scn="S0" onclick="pickScn('S0')"><b>S0 정상</b><small>교란 없음 (기준)</small></div>
+          <div class="wiz-opt sel" data-scn="S1" onclick="pickScn('S1')"><b>S1 부품 지연</b><small>일부 부품 입고 지연</small></div>
+          <div class="wiz-opt" data-scn="S2" onclick="pickScn('S2')"><b>S2 긴급 주문</b><small>도중 긴급 작업 삽입</small></div>
+        </div>
+        <div id="scn-params"></div>
+      </div>
+
+      <!-- 현실 이벤트로 생성 -->
+      <div id="scn-event" style="display:none">
+        <div class="wiz-sub">현실 공급망 사건을 자연어로 적으면 LLM이 시나리오 파라미터로 변환합니다.</div>
+        <div class="param-row"><label>이벤트 유형</label>
+          <input id="ev-type" class="form-control" placeholder="예: 항만 폐쇄, 공급업체 화재, 긴급 주문"></div>
+        <div class="param-row"><label>예상 지연 (일)</label>
+          <input id="ev-days" type="number" class="form-control" style="width:110px" value="5" min="0"></div>
+        <div class="param-row"><label>심각도</label>
+          <select id="ev-sev" class="form-select" style="width:140px">
+            <option value="low">경미</option><option value="medium" selected>중간</option><option value="high">심각</option>
+          </select></div>
+        <div class="param-row"><label>추가 정보</label>
+          <input id="ev-info" class="form-control" placeholder="(선택) 상세 상황"></div>
+        <button id="ev-go" class="btn btn-primary btn-sm" onclick="translateEvent()"><i class="fa fa-wand-magic-sparkles me-1"></i>시나리오로 변환</button>
+        <div id="ev-result"></div>
+      </div>
     </div>
 
     <!-- STEP 3 — 기준 성적 -->
@@ -74,7 +100,11 @@
       <div class="wiz-h">3단계 · 기준 성적 만들기</div>
       <div class="wiz-sub">사람이 만든 규칙 10개(B1~B10)를 돌려 비교 기준선을 만듭니다. LLM은 아직 안 돕니다.</div>
       <button id="g-run-base" class="btn btn-primary" onclick="runBaselines()"><i class="fa fa-play me-1"></i>기준 규칙 실행</button>
-      <div id="g-base-prog" style="display:none; margin-top:16px"><div class="log-console" id="g-base-log"></div></div>
+      <div id="g-base-prog" style="display:none; margin-top:16px">
+        <div class="progress mb-2"><div id="g-base-bar" class="progress-bar" style="width:0%"></div></div>
+        <div id="g-base-eta" class="wiz-sub" style="margin-bottom:8px"></div>
+        <div class="log-console" id="g-base-log"></div>
+      </div>
       <div id="g-base-result"></div>
     </div>
 
@@ -93,6 +123,7 @@
       <button id="g-run-evo" class="btn btn-primary" onclick="runEvolution()"><i class="fa fa-dna me-1"></i>진화 실행</button>
       <div id="g-evo-prog" style="display:none; margin-top:16px">
         <div class="progress mb-2"><div id="g-evo-bar" class="progress-bar" style="width:0%"></div></div>
+        <div id="g-evo-eta" class="wiz-sub" style="margin-bottom:8px"></div>
         <div class="log-console" id="g-evo-log"></div>
       </div>
       <div id="g-evo-result"></div>
@@ -131,6 +162,44 @@
 const STEPS = [
   '공장 선택', '상황 설정', '기준 성적', 'AI 진화', '인간 vs AI', '보고서'
 ];
+// 사람이 만든 기준 규칙 = 어떤 고전 알고리즘인가
+const HUMAN_ALGO = {
+  B1: ['FIFO', '도착 순서대로 처리'],
+  B2: ['EDD', '납기 빠른 작업 먼저'],
+  B3: ['SPT', '처리시간 짧은 작업 먼저'],
+  B4: ['Critical Ratio', '납기 대비 남은 작업량이 빠듯한 작업 먼저'],
+  B5: ['Urgency', '긴급 주문 플래그에 가산점'],
+  B6: ['PT+WINQ+SL', '처리시간·다음 대기열·여유시간 결합'],
+  B7: ['CR+SPT', 'Critical Ratio와 SPT를 절반씩 혼합'],
+  B8: ['AT-RPT', '도착시간 + 잔여 처리시간 (작을수록 우선)'],
+  B9: ['PDDR', '기계 한가하면 SPT, 바쁘면 LPT 전환'],
+  B10:['ATCS', '납기 임박 비용을 근사한 복합 규칙'],
+};
+function algoLabel(id) {
+  const a = HUMAN_ALGO[id];
+  return a ? `<b>${id} · ${a[0]}</b> — ${a[1]}` : `<b>${id}</b>`;
+}
+function fmtSec(s) {
+  if (s == null) return '계산 중…';
+  if (s < 60) return `~${Math.ceil(s)}초`;
+  return `~${Math.floor(s/60)}분 ${Math.ceil(s%60)}초`;
+}
+// 터널 환경에서 SSE가 버퍼링되므로 폴링으로 진행상황 표시
+function pollTask(taskId, {onTick, onDone, onError} = {}) {
+  const t0 = Date.now();
+  const iv = setInterval(async () => {
+    let d;
+    try { d = await API.get(`/api/tasks/${taskId}`); } catch (e) { return; }
+    if (!d || !d.ok) { clearInterval(iv); onError?.('작업을 찾을 수 없습니다'); return; }
+    const t = d.data;
+    const prog = t.progress || 0;
+    const elapsed = (Date.now() - t0) / 1000;
+    const eta = prog > 3 ? Math.max(0, elapsed * (100 - prog) / prog) : null;
+    onTick?.(prog, t.log || [], eta, elapsed);
+    if (t.status === 'done')  { clearInterval(iv); onDone?.(t.result); }
+    if (t.status === 'error') { clearInterval(iv); onError?.(t.error); }
+  }, 1500);
+}
 const W = {
   step: 1,
   family: '', instance: '', instInfo: null,
@@ -243,6 +312,49 @@ function renderScnParams() {
   }
 }
 
+// 시나리오 입력 모드 전환 (직접 / 이벤트)
+function setScnMode(mode) {
+  document.getElementById('scn-manual').style.display = mode === 'manual' ? 'block' : 'none';
+  document.getElementById('scn-event').style.display  = mode === 'event'  ? 'block' : 'none';
+  document.getElementById('m2-manual').className = 'btn btn-sm ' + (mode==='manual'?'btn-primary':'btn-outline-secondary');
+  document.getElementById('m2-event').className  = 'btn btn-sm ' + (mode==='event' ?'btn-primary':'btn-outline-secondary');
+}
+async function translateEvent() {
+  const btn = document.getElementById('ev-go'); btn.disabled = true;
+  const res = document.getElementById('ev-result');
+  res.innerHTML = '<div class="wiz-sub" style="margin-top:12px"><i class="fa fa-spinner fa-spin me-1"></i>변환 중…</div>';
+  const types = (document.getElementById('ev-type').value || '').split(',').map(s=>s.trim()).filter(Boolean);
+  const body = {
+    event_types: types,
+    delay_days: +document.getElementById('ev-days').value || 0,
+    severity: document.getElementById('ev-sev').value,
+    additional_info: document.getElementById('ev-info').value || '',
+  };
+  const d = await API.post('/api/event/translate', body);
+  btn.disabled = false;
+  if (!d.ok) { res.innerHTML = `<div class="wiz-result loss" style="margin-top:12px">변환 실패: ${d.error||''}</div>`; return; }
+  const r = d.data;
+  // 단일 시나리오 제약: 복합(S1+S2)이면 S1 우선, S2 단독이면 S2
+  const isS2 = (r.primary_scenario || '').toUpperCase() === 'S2';
+  const scn = isS2 ? 'S2' : 'S1';
+  if (isS2 && r.s2_params) {
+    W.sp.s2_ddf = r.s2_params.s2_ddf; W.sp.s2_n_urgent = r.s2_params.s2_n_urgent;
+    W.sp.s2_arrival_min = r.s2_params.s2_arrival_min; W.sp.s2_arrival_max = r.s2_params.s2_arrival_max;
+  } else if (r.s1_params) {
+    W.sp.s1_ratio = r.s1_params.s1_ratio; W.sp.s1_k = r.s1_params.s1_k;
+    W.sp.s1_timing_min = r.s1_params.s1_timing_min; W.sp.s1_timing_max = r.s1_params.s1_timing_max;
+  }
+  pickScn(scn);
+  const note = (r.primary_scenario||'').includes('+') ? '<br><small>⚠️ 복합 이벤트 → 단일 시나리오 제약상 S1로 진행합니다.</small>' : '';
+  const p = scn==='S2'
+    ? `납기계수 ${W.sp.s2_ddf}, 긴급 ${W.sp.s2_n_urgent}건`
+    : `영향비율 ${W.sp.s1_ratio}, 지연배수 ${W.sp.s1_k}`;
+  res.innerHTML = `<div class="wiz-result" style="margin-top:12px">
+    <b>→ ${r.primary_scenario} 시나리오로 변환됨</b> (${p})${note}<br>
+    <small>${r.impact_summary||''}</small></div>`;
+  toast('이벤트가 시나리오로 변환되었습니다','success');
+}
+
 // ── STEP 3 — baselines ───────────────────────────────────
 async function runBaselines() {
   const btn = document.getElementById('g-run-base');
@@ -253,19 +365,26 @@ async function runBaselines() {
   const body = { instance:W.instance, family:W.family, scenario:W.scenario, n_seeds:W.nSeeds, ...W.sp };
   const r = await API.post('/api/baselines/run', body);
   if (!r.ok) { toast('실행 실패','error'); btn.disabled=false; return; }
-  streamTask(r.task_id, {
-    onLog: m => { log.textContent += m + '\n'; log.scrollTop = log.scrollHeight; },
+  pollTask(r.task_id, {
+    onTick: (prog, logs, eta) => {
+      document.getElementById('g-base-bar').style.width = prog + '%';
+      document.getElementById('g-base-eta').textContent =
+        `진행률 ${prog}% · 예상 남은 시간 ${fmtSec(eta)}`;
+      log.textContent = logs.join('\n'); log.scrollTop = log.scrollHeight;
+    },
     onDone: res => {
+      document.getElementById('g-base-bar').style.width = '100%';
+      document.getElementById('g-base-eta').textContent = '완료 ✓';
       const results = res.results;
       const rows = Object.entries(results).sort((a,b)=>a[1].mean-b[1].mean);
       W.bestBaseId = rows[0][0]; W.bestBaseMean = rows[0][1].mean; W.baseDone = true;
-      let t = '<table class="wiz-mini"><tr><th>규칙</th><th>AT 평균</th><th>납기위반%</th></tr>';
+      let t = '<table class="wiz-mini"><tr><th>규칙</th><th>알고리즘</th><th>AT</th><th>납기위반%</th></tr>';
       rows.slice(0,5).forEach(([id,s]) =>
-        t += `<tr><td>${id}${id===W.bestBaseId?' 🏆':''}</td><td>${s.mean.toFixed(1)}</td><td>${s.ptj.toFixed(0)}%</td></tr>`);
+        t += `<tr><td>${id}${id===W.bestBaseId?' 🏆':''}</td><td>${(HUMAN_ALGO[id]||['-'])[0]}</td><td>${s.mean.toFixed(1)}</td><td>${s.ptj.toFixed(0)}%</td></tr>`);
       t += '</table>';
       document.getElementById('g-base-result').innerHTML =
-        `<div class="wiz-result"><b>최강 기준 규칙: ${W.bestBaseId}</b> (AT ${W.bestBaseMean.toFixed(1)})<br>
-         <small>진화가 이 숫자를 이기면 LLM 승리입니다. 상위 5개:</small>${t}</div>`;
+        `<div class="wiz-result"><b>🏆 최강 기준 규칙</b><br>${algoLabel(W.bestBaseId)} (AT ${W.bestBaseMean.toFixed(1)})<br>
+         <small>👤 사람이 손으로 설계한 고전 디스패칭 규칙입니다. 진화가 이 AT를 이기면 LLM 승리. 상위 5개:</small>${t}</div>`;
       btn.disabled = false; refreshNext();
     },
     onError: e => { toast('오류: '+e,'error'); btn.disabled=false; }
@@ -288,15 +407,21 @@ async function runEvolution() {
                  method:W.method, n_seeds:W.nSeeds, n_iter:niter, ...W.sp };
   const r = await API.post('/api/evolution/start', body);
   if (!r.ok) { toast('실행 실패','error'); btn.disabled=false; return; }
-  streamTask(r.task_id, {
-    onLog: m => { log.textContent += m + '\n'; log.scrollTop = log.scrollHeight; },
-    onProgress: p => { document.getElementById('g-evo-bar').style.width = Math.min(p,100)+'%'; },
+  pollTask(r.task_id, {
+    onTick: (prog, logs, eta) => {
+      document.getElementById('g-evo-bar').style.width = Math.min(prog,100) + '%';
+      document.getElementById('g-evo-eta').textContent =
+        `진행률 ${Math.min(prog,100)}% · 예상 남은 시간 ${fmtSec(eta)}`;
+      log.textContent = logs.join('\n'); log.scrollTop = log.scrollHeight;
+    },
     onDone: res => {
+      document.getElementById('g-evo-bar').style.width = '100%';
+      document.getElementById('g-evo-eta').textContent = '완료 ✓';
       W.evoResult = res; W.evoDone = true;
       const br = res.best_rule || {};
       const traj = (res.iteration_best_at||[]).map(x=>x.toFixed(1)).join(' → ');
       document.getElementById('g-evo-result').innerHTML =
-        `<div class="wiz-result"><b>진화 완료</b> — 최종 규칙: ${br.rule_id} (${br.operator_kr||br.operator})<br>
+        `<div class="wiz-result"><b>🤖 진화 완료</b> — 최종 규칙: ${br.rule_id} (${br.operator_kr||br.operator})<br>
          <small>세대별 최적 AT: ${traj}</small></div>`;
       btn.disabled = false; refreshNext();
     },
@@ -318,21 +443,25 @@ function renderCompare() {
       <div>${verdict}</div>
     </div>
     <table class="wiz-mini" style="margin-top:16px; width:100%">
-      <tr><th></th><th>규칙</th><th>AT 평균</th></tr>
-      <tr><td>👤 사람 (최강)</td><td>${W.bestBaseId}</td><td>${W.bestBaseMean.toFixed(1)}</td></tr>
-      <tr><td>🤖 LLM 진화</td><td>${(W.evoResult.best_rule||{}).rule_id||'-'}</td><td>${llmMean.toFixed(1)}</td></tr>
+      <tr><th></th><th>규칙 / 알고리즘</th><th>AT 평균</th></tr>
+      <tr><td>👤 사람 (최강)</td><td>${algoLabel(W.bestBaseId)}</td><td>${W.bestBaseMean.toFixed(1)}</td></tr>
+      <tr><td>🤖 LLM 진화</td><td>${(W.evoResult.best_rule||{}).rule_id||'-'} (${(W.evoResult.best_rule||{}).operator_kr||'LLM 생성'})</td><td>${llmMean.toFixed(1)}</td></tr>
     </table>
     <div class="wiz-sub" style="margin-top:14px">
+      👤 <b>사람의 방식</b>: ${algoLabel(W.bestBaseId)} — 연구자가 수식으로 직접 설계한 고전 규칙.<br>
+      🤖 <b>AI의 방식</b>: LLM이 위 규칙들을 재료로 변이·교차·반성을 거쳐 자동 생성.<br><br>
       ARI = (사람 − LLM) / 사람 × 100. 양수면 LLM이 납기 지연을 더 줄인 것입니다.
-      ${tie?'<br>LLM이 사람의 최강 휴리스틱과 동등한 로직을 스스로 찾아냈다는 의미예요.':''}
+      ${tie?'<br>이번엔 LLM이 사람의 최강 휴리스틱과 동등한 로직을 스스로 찾아냈다는 의미예요.':''}
     </div>`;
 }
 
 // ── STEP 6 — report ──────────────────────────────────────
 async function genReport(fmt) {
   const body = { format:fmt, instance:W.instance, family:W.family, scenario:W.scenario,
-                 sections:['benchmark','scenario','baselines','evolution','summary'], include_nl:false };
-  setStatus('보고서 생성 중...','warning');
+                 sections:['benchmark','scenario','baselines','evolution','summary'], include_nl:true };
+  setStatus('보고서 생성 중 (LLM 알고리즘 설명 포함)...','warning');
+  document.getElementById('g-report').innerHTML =
+    '<div class="wiz-sub"><i class="fa fa-spinner fa-spin me-1"></i>보고서 생성 중… LLM이 진화 규칙을 자연어로 설명하는 중이라 10~20초 걸립니다.</div>';
   const r = await fetch('/api/report/generate', {
     method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
   setStatus('준비','success');

@@ -33,6 +33,20 @@ from sim.data.loader import (
 )
 from sim.core.simulator import FJSSPSimulator
 from sim.rules.baseline import RULES as BASELINE_RULES
+
+# 사람이 손으로 설계한 기준 규칙 = 어떤 고전 알고리즘인가 (보고서/비교용)
+HUMAN_ALGO = {
+    "B1":  ("FIFO",        "도착 순서대로 처리"),
+    "B2":  ("EDD",         "납기 빠른 작업 먼저"),
+    "B3":  ("SPT",         "처리시간 짧은 작업 먼저"),
+    "B4":  ("Critical Ratio", "납기 대비 남은 작업량이 빠듯한 작업 먼저"),
+    "B5":  ("Urgency",     "긴급 주문 플래그에 가산점"),
+    "B6":  ("PT+WINQ+SL",  "처리시간·다음 대기열·여유시간 결합"),
+    "B7":  ("CR+SPT",      "Critical Ratio와 SPT를 절반씩 혼합"),
+    "B8":  ("AT-RPT",      "도착시간 + 잔여 처리시간 (작을수록 우선)"),
+    "B9":  ("PDDR",        "기계 한가하면 SPT, 바쁘면 LPT 전환"),
+    "B10": ("ATCS",        "납기 임박 비용을 근사한 복합 규칙"),
+}
 from sim.scenarios.s0_normal import S0Normal
 from sim.scenarios.s1_part_delay import S1PartDelay
 from sim.scenarios.s2_urgent_order import S2UrgentOrder
@@ -678,22 +692,31 @@ def api_generate_report():
     if "baselines" in sections:
         bdata = _load_results(f"baselines_{scenario}_{instance}")
         if bdata:
-            md_lines += ["## 기본 규칙 성능 (Baseline Performance)", ""]
             md_lines += [
-                "| 규칙 | AT 평균 | AT 표준편차 | 납기위반%(PTJ) | 기계유휴(MIT) | Makespan | ARI |",
-                "|------|---------|-----------|--------------|------------|---------|-----|",
+                "## 기본 규칙 성능 (Baseline Performance)",
+                "",
+                "👤 아래는 **연구자가 수식으로 직접 설계한 고전 디스패칭 규칙(휴리스틱)** 입니다.",
+                "",
+            ]
+            md_lines += [
+                "| 규칙 | 알고리즘 (사람이 설계) | AT 평균 | AT 표준편차 | 납기위반%(PTJ) | 기계유휴(MIT) | Makespan | ARI |",
+                "|------|--------|---------|-----------|--------------|------------|---------|-----|",
             ]
             for bid, v in sorted(bdata.items(), key=lambda x: x[1]["mean"]):
+                algo = HUMAN_ALGO.get(bid, ("", ""))
                 md_lines.append(
-                    f"| {bid} | {v.get('mean',0):.3f} | {v.get('std',0):.3f} "
+                    f"| {bid} | {algo[0]} | {v.get('mean',0):.3f} | {v.get('std',0):.3f} "
                     f"| {v.get('ptj',0):.1f}% | {v.get('mit',0):.1f} "
                     f"| {v.get('makespan',0):.1f} | {v.get('ari',0):+.1f}% |"
                 )
             md_lines.append("")
             best_bid = min(bdata, key=lambda b: bdata[b]["mean"])
             best_v = bdata[best_bid]
+            best_algo = HUMAN_ALGO.get(best_bid, ("", ""))
             md_lines += [
-                f"> **최적 규칙**: {best_bid}  |  AT {best_v['mean']:.3f} ± {best_v['std']:.3f}"
+                f"> **최적 규칙(사람)**: {best_bid} · **{best_algo[0]}** — {best_algo[1]}",
+                f">",
+                f"> AT {best_v['mean']:.3f} ± {best_v['std']:.3f}"
                 f"  |  납기위반 {best_v.get('ptj',0):.1f}%  |  Makespan {best_v.get('makespan',0):.1f}",
                 "",
             ]
