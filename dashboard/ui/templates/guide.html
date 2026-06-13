@@ -66,11 +66,7 @@
       </details>
 
       <div class="mb-3">
-        <label class="form-label">패밀리</label>
-        <select id="g-family" class="form-select" onchange="onFamily()"></select>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">인스턴스 (공장)</label>
+        <label class="form-label">공장 선택</label>
         <select id="g-instance" class="form-select" onchange="onInstance()"></select>
       </div>
       <div id="g-inst-info" class="wiz-result" style="display:none"></div>
@@ -303,17 +299,13 @@ async function loadBench() {
   const d = await API.get('/api/benchmarks');
   if (!d.ok) return;
   W.allBench = d.data;
+  // 패밀리는 화면에서 숨기고 자동 선택 (모든 패밀리의 공장을 한 목록에 표시)
   const fams = Object.keys(d.data);
-  document.getElementById('g-family').innerHTML =
-    fams.map(f => `<option value="${f}">${f}</option>`).join('');
-  W.family = fams[0];
-  onFamily();
-}
-function onFamily() {
-  W.family = document.getElementById('g-family').value;
-  const insts = W.allBench[W.family] || [];
-  document.getElementById('g-instance').innerHTML =
-    insts.map(n => `<option value="${n}">${n}</option>`).join('');
+  W.family = fams[0] || 'custom';
+  const opts = [];
+  fams.forEach(f => (W.allBench[f] || []).forEach(n =>
+    opts.push(`<option value="${n}" data-fam="${f}">${n}</option>`)));
+  document.getElementById('g-instance').innerHTML = opts.join('');
   onInstance();
 }
 function describeFactory(info) {
@@ -328,7 +320,10 @@ function describeFactory(info) {
     `각 공정을 평균 <b>${flex}대 중에서</b> 선택 가능 — 현실 공장에 가장 가깝습니다. "무엇을·어디서" 둘 다 정해야 해서 가장 흥미로운 영역이며, 우리 연구에서 LLM의 강점이 두드러지는 구간입니다.`];
 }
 async function onInstance() {
-  W.instance = document.getElementById('g-instance').value;
+  const sel = document.getElementById('g-instance');
+  W.instance = sel.value;
+  const opt = sel.options[sel.selectedIndex];
+  if (opt && opt.dataset.fam) W.family = opt.dataset.fam;   // 패밀리 자동 결정
   const d = await API.get(`/api/benchmark/${W.family}/${W.instance}`);
   if (d.ok) {
     W.instInfo = d.data;
