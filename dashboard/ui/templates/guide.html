@@ -145,6 +145,33 @@
         <button class="btn btn-outline-secondary" onclick="genReport('pdf')"><i class="fa fa-file-pdf me-1"></i>PDF</button>
       </div>
       <div id="g-report" class="md-preview" style="background:var(--bg-surface); border:1px solid var(--border); border-radius:8px; padding:14px; max-height:420px; overflow-y:auto; font-size:12px"></div>
+
+      <!-- 더 알아보기 (선택) -->
+      <div style="margin-top:24px; border-top:1px dashed var(--border); padding-top:18px">
+        <div class="wiz-h" style="font-size:15px">✅ 워크플로우 완료 — 더 알아보기 (선택)</div>
+        <div class="wiz-sub">필수는 아닙니다. 방금 만든 규칙을 더 깊게 검증하고 싶을 때만.</div>
+        <div class="wiz-pick">
+          <div class="wiz-opt" style="flex-basis:100%">
+            <b>🔥 스트레스 테스트</b>
+            <small>방금 진화한 규칙이 <u>다른 교란 강도(S0~S2 7종)</u>에서도 튼튼한지, 최강 기준 규칙과 나란히 비교합니다.</small>
+            <button class="btn btn-outline-primary btn-sm mt-2" onclick="runStressInline()">
+              <i class="fa fa-fire-flame-curved me-1"></i>이 규칙으로 스트레스 테스트
+            </button>
+          </div>
+          <div class="wiz-opt" id="g-mem-card" style="flex-basis:100%; display:none">
+            <b>🧠 경험 메모리 (P3)</b>
+            <small>P3 진화 중 LLM이 뽑아낸 교훈을 봅니다.</small><br>
+            <a class="btn btn-outline-secondary btn-sm mt-2" href="/memory-center" target="_blank">
+              <i class="fa fa-brain me-1"></i>경험 메모리 열기
+            </a>
+          </div>
+        </div>
+        <div id="g-stress-prog" style="display:none; margin-top:14px">
+          <div class="progress mb-2"><div id="g-stress-bar" class="progress-bar" style="width:0%"></div></div>
+          <div id="g-stress-eta" class="wiz-sub"></div>
+        </div>
+        <div id="g-stress-result"></div>
+      </div>
     </div>
 
     <!-- nav -->
@@ -481,7 +508,71 @@ async function genReport(fmt) {
   toast('보고서 다운로드 완료!','success');
 }
 
+// ── 더 알아보기 — 스트레스 테스트 (인라인) ────────────────
+async function runStressInline() {
+  if (!W.evoResult) { toast('먼저 진화를 완료하세요','error'); return; }
+  const ev = W.evoResult.best_rule || {};
+  const extra = ev.code ? [{rule_id: ev.rule_id, code: ev.code}]
+              : (ev.rule_id && ev.rule_id !== W.bestBaseId ? [{rule_id: ev.rule_id, code: ''}] : []);
+  const body = { instance:W.instance, family:W.family, n_seeds:10,
+                 rules:[W.bestBaseId], extra_rules: extra };
+  document.getElementById('g-stress-prog').style.display = 'block';
+  document.getElementById('g-stress-result').innerHTML = '';
+  const r = await API.post('/api/stress-test/run', body);
+  if (!r.ok) { toast('실행 실패','error'); return; }
+  pollTask(r.task_id, {
+    onTick: (prog, logs, eta) => {
+      document.getElementById('g-stress-bar').style.width = prog + '%';
+      document.getElementById('g-stress-eta').textContent = `진행률 ${prog}% · 예상 남은 시간 ${fmtSec(eta)}`;
+    },
+    onDone: res => {
+      document.getElementById('g-stress-bar').style.width = '100%';
+      document.getElementById('g-stress-eta').textContent = '완료 ✓';
+      renderStress(res);
+    },
+    onError: e => toast('오류: '+e,'error')
+  });
+}
+function renderStress(res) {
+  const scns = res.scenarios || [];
+  const mat = res.matrix || {};
+  const ids = Object.keys(mat);
+  const evoId = (W.evoResult.best_rule||{}).rule_id;
+  let h = '<table class="wiz-mini" style="width:100%; margin-top:14px"><tr><th>규칙</th>';
+  scns.forEach(s => h += `<th>${s}</th>`); h += '</tr>';
+  ids.forEach(id => {
+    const tag = id===evoId ? '🤖' : '👤';
+    h += `<tr><td>${tag} ${id}</td>`;
+    scns.forEach(s => {
+      const v = mat[id][s];
+      // 같은 열에서 최솟값(가장 튼튼)이면 강조
+      const best = Math.min(...ids.map(i => mat[i][s] ?? Infinity));
+      const win = v === best;
+      h += `<td style="${win?'color:#2ea043;font-weight:700':''}">${v!=null?v.toFixed(0):'-'}</td>`;
+    });
+    h += '</tr>';
+  });
+  h += '</table>';
+  // 강건성 판정 (진화 규칙이 baseline보다 낮은 칸 수)
+  let verdict = '';
+  if (ids.length >= 2 && evoId && mat[evoId] && mat[W.bestBaseId]) {
+    let wins=0, tot=0;
+    scns.forEach(s => { const a=mat[evoId][s], b=mat[W.bestBaseId][s];
+      if (a!=null && b!=null){ tot++; if (a < b) wins++; } });
+    verdict = `<div class="wiz-sub" style="margin-top:10px">🤖 진화 규칙이 ${tot}개 상황 중 <b>${wins}개</b>에서 사람 최강 규칙보다 우수 (낮은 AT). 초록색 = 해당 상황에서 가장 튼튼한 규칙.</div>`;
+  }
+  document.getElementById('g-stress-result').innerHTML =
+    `<div class="wiz-result">${h}${verdict}</div>`;
+}
+
 // ── init ─────────────────────────────────────────────────
+const _origShowStep = showStep;
+showStep = function(n) {
+  _origShowStep(n);
+  if (n === 6) {
+    document.getElementById('g-mem-card').style.display = (W.method === 'P3') ? 'block' : 'none';
+  }
+};
 loadBench();
 renderScnParams();
 showStep(1);

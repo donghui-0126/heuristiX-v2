@@ -506,8 +506,30 @@ def api_stress_test():
     name    = body.get("instance", "mk01")
     family  = body.get("family", "brandimarte")
     rules   = body.get("rules", list(BASELINE_RULES.keys()))
+    # 진화 규칙 등 baseline이 아닌 규칙: [{rule_id, code(Python)}] 형태로 직접 전달 가능
+    extra_rules = body.get("extra_rules", [])
     n_seeds = int(body.get("n_seeds", 30))
     ddt     = float(body.get("ddt", _settings["ddt"]))
+
+    # rule_id -> callable 해석 (baseline + 전달된 진화 규칙)
+    from sim.rules.interface import load_priority_fn
+    rule_fns = {}
+    for bid in rules:
+        if bid in BASELINE_RULES:
+            rule_fns[bid] = BASELINE_RULES[bid]
+    for er in extra_rules:
+        rid = er.get("rule_id")
+        code = (er.get("code") or "").strip()
+        if not rid:
+            continue
+        if code:
+            try:
+                rule_fns[rid] = load_priority_fn(code)
+            except Exception:
+                continue
+        elif rid in BASELINE_RULES:
+            rule_fns[rid] = BASELINE_RULES[rid]
+    rules = list(rule_fns.keys())
 
     tid = _new_task("stress_test")
 
@@ -533,16 +555,16 @@ def api_stress_test():
             done = 0
 
             for bid in rules:
-                if bid not in BASELINE_RULES:
+                fn = rule_fns.get(bid)
+                if fn is None:
                     continue
-                fn = BASELINE_RULES[bid]
                 matrix[bid] = {}
                 for (stype, sparams) in STRESS_SCENARIOS:
                     s1r = sparams.get("s1_ratio", 0.20)
                     s1k = sparams.get("s1_k", 1.0)
                     s2d = sparams.get("s2_ddf", 0.5)
                     lbl = _scenario_label(stype, s1r, s1k, s2d)
-                    scen_obj = _build_scenario(stype, s1r, s1k, s2d)
+                    scen_obj = _build_scenario(stype, s1_ratio=s1r, s1_k=s1k, s2_ddf=s2d)
 
                     def sfactory(seed, _j=jobs, _n=n_m, _t=t_est, _s=scen_obj):
                         return _s.build_events(_j, _n, _t, seed=seed)
