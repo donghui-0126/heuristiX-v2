@@ -208,6 +208,27 @@
 {% block scripts %}{% endblock %}
 
 <script>
+// 패밀리 선택 UI 전역 숨김 — 패밀리가 사실상 'custom' 하나뿐이라 노출 불필요.
+// select 요소는 DOM에 남겨 값(=custom)이 유지되므로 각 페이지의 인스턴스 로딩은 그대로 동작.
+(function hideFamilySelectors() {
+  function hide() {
+    document.querySelectorAll('select').forEach(sel => {
+      if (!/family/i.test(sel.id) || sel.dataset._famHidden) return;
+      sel.dataset._famHidden = '1';
+      sel.style.display = 'none';
+      const lbl = sel.previousElementSibling;
+      if (lbl && lbl.tagName === 'LABEL') lbl.style.display = 'none';
+      const wrap = sel.closest('.mb-3, .form-group, .col');
+      if (wrap && wrap.querySelectorAll('select').length === 1) wrap.style.display = 'none';
+    });
+  }
+  hide();
+  // 일부 페이지는 패밀리 select를 비동기로 채우므로 잠깐만 관찰 후 중단
+  const obs = new MutationObserver(hide);
+  obs.observe(document.body, {childList:true, subtree:true});
+  setTimeout(() => obs.disconnect(), 4000);
+})();
+
 document.getElementById('sidebar-toggle').addEventListener('click', () => {
   document.getElementById('sidebar').classList.toggle('collapsed');
   document.getElementById('main-content').classList.toggle('expanded');
