@@ -64,6 +64,16 @@
 
   <ul class="sidebar-nav" style="padding: 0; list-style: none; margin: 0">
 
+    <!-- ─── 가이드 (처음이라면 여기부터) ───── -->
+    <li>
+      <a href="/guide" class="{% if active=='guide' %}active{% endif %}"
+         style="background:rgba(88,166,255,.1); border-left:3px solid var(--accent)">
+        <i class="fa fa-wand-magic-sparkles"></i>
+        <span class="nav-step">▶</span>
+        <span>시작하기 (가이드)</span>
+      </a>
+    </li>
+
     <!-- ─── PHASE 1: 준비 ─────────────────── -->
     <li class="nav-phase-label">1단계 — 준비</li>
     <li>

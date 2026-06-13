@@ -130,6 +130,10 @@ def _task_error(tid: str, err: str):
 def page_home():
     return render_template("index.html", active="home")
 
+@app.route("/guide")
+def page_guide():
+    return render_template("guide.html", active="guide")
+
 @app.route("/benchmark-manager")
 def page_benchmark():
     return render_template("benchmark_manager.html", active="benchmark")

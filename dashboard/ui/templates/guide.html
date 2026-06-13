@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+{% block title %}시작하기 — 가이드{% endblock %}
+{% block page_title %}🚀 시작하기 (가이드 워크플로우){% endblock %}
+
+{% block head %}
+<style>
+  .wiz-wrap { max-width: 760px; margin: 0 auto; }
+  .wiz-dots { display:flex; align-items:center; justify-content:center; gap:6px; margin: 8px 0 22px; }
+  .wiz-dot { width:11px; height:11px; border-radius:50%; background:var(--border); transition:all .2s; }
+  .wiz-dot.active { background:var(--accent); transform:scale(1.25); }
+  .wiz-dot.done { background:#2ea043; }
+  .wiz-line { width:26px; height:2px; background:var(--border); }
+  .wiz-line.done { background:#2ea043; }
+  .wiz-step-label { text-align:center; color:var(--text-secondary); font-size:12px; margin-bottom:18px; }
+  .wiz-card { background:var(--bg-surface); border:1px solid var(--border); border-radius:12px; padding:28px; }
+  .wiz-h { font-size:20px; font-weight:700; margin-bottom:4px; }
+  .wiz-sub { color:var(--text-secondary); font-size:13px; margin-bottom:22px; }
+  .wiz-nav { display:flex; justify-content:space-between; margin-top:26px; }
+  .wiz-pick { display:flex; gap:10px; flex-wrap:wrap; }
+  .wiz-opt { flex:1; min-width:150px; border:1.5px solid var(--border); border-radius:10px; padding:14px; cursor:pointer; transition:all .15s; }
+  .wiz-opt:hover { border-color:var(--accent); }
+  .wiz-opt.sel { border-color:var(--accent); background:rgba(88,166,255,.08); }
+  .wiz-opt b { display:block; margin-bottom:3px; }
+  .wiz-opt small { color:var(--text-secondary); }
+  .wiz-result { background:rgba(46,160,67,.08); border:1px solid rgba(46,160,67,.4); border-radius:10px; padding:16px; margin-top:16px; }
+  .wiz-result.loss { background:rgba(248,81,73,.08); border-color:rgba(248,81,73,.4); }
+  .wiz-mini { font-size:12px; }
+  .wiz-mini td, .wiz-mini th { padding:3px 10px; border-bottom:1px solid var(--border); }
+  .log-console { background:#0d1117; border-radius:8px; padding:10px; font-family:monospace; font-size:11px; height:150px; overflow-y:auto; white-space:pre-wrap; color:#8b949e; }
+  .param-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  .param-row label { width:170px; font-size:13px; }
+  .big-metric { font-size:30px; font-weight:800; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wiz-wrap">
+
+  <!-- progress dots -->
+  <div class="wiz-dots" id="wiz-dots"></div>
+  <div class="wiz-step-label" id="wiz-steplabel"></div>
+
+  <div class="wiz-card">
+
+    <!-- STEP 1 — 공장 선택 -->
+    <div class="wiz-step" data-step="1">
+      <div class="wiz-h">1단계 · 공장 선택</div>
+      <div class="wiz-sub">어떤 작업장(벤치마크)을 시뮬레이션할지 고릅니다.</div>
+      <div class="mb-3">
+        <label class="form-label">패밀리</label>
+        <select id="g-family" class="form-select" onchange="onFamily()"></select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">인스턴스</label>
+        <select id="g-instance" class="form-select" onchange="onInstance()"></select>
+      </div>
+      <div id="g-inst-info" class="wiz-sub"></div>
+    </div>
+
+    <!-- STEP 2 — 시나리오 -->
+    <div class="wiz-step" data-step="2" style="display:none">
+      <div class="wiz-h">2단계 · 상황(시나리오) 설정</div>
+      <div class="wiz-sub">어떤 공급망 교란 상황에서 테스트할지 정합니다.</div>
+      <div class="wiz-pick mb-3">
+        <div class="wiz-opt" data-scn="S0" onclick="pickScn('S0')"><b>S0 정상</b><small>교란 없음 (기준)</small></div>
+        <div class="wiz-opt sel" data-scn="S1" onclick="pickScn('S1')"><b>S1 부품 지연</b><small>일부 부품 입고 지연</small></div>
+        <div class="wiz-opt" data-scn="S2" onclick="pickScn('S2')"><b>S2 긴급 주문</b><small>도중 긴급 작업 삽입</small></div>
+      </div>
+      <div id="scn-params"></div>
+    </div>
+
+    <!-- STEP 3 — 기준 성적 -->
+    <div class="wiz-step" data-step="3" style="display:none">
+      <div class="wiz-h">3단계 · 기준 성적 만들기</div>
+      <div class="wiz-sub">사람이 만든 규칙 10개(B1~B10)를 돌려 비교 기준선을 만듭니다. LLM은 아직 안 돕니다.</div>
+      <button id="g-run-base" class="btn btn-primary" onclick="runBaselines()"><i class="fa fa-play me-1"></i>기준 규칙 실행</button>
+      <div id="g-base-prog" style="display:none; margin-top:16px"><div class="log-console" id="g-base-log"></div></div>
+      <div id="g-base-result"></div>
+    </div>
+
+    <!-- STEP 4 — AI 진화 -->
+    <div class="wiz-step" data-step="4" style="display:none">
+      <div class="wiz-h">4단계 · AI 규칙 진화</div>
+      <div class="wiz-sub">LLM이 세대를 거치며 더 나은 규칙을 키웁니다. (LLM 호출이 많아 1~5분 걸립니다.)</div>
+      <label class="form-label">진화 방식</label>
+      <div class="wiz-pick mb-3">
+        <div class="wiz-opt" data-m="P1" onclick="pickM('P1')"><b>P1</b><small>교란 변수 미사용</small></div>
+        <div class="wiz-opt sel" data-m="P2" onclick="pickM('P2')"><b>P2 (추천)</b><small>모든 변수 활용</small></div>
+        <div class="wiz-opt" data-m="P3" onclick="pickM('P3')"><b>P3</b><small>경험 메모리 포함</small></div>
+      </div>
+      <div class="param-row"><label>세대 수</label>
+        <input id="g-niter" type="number" class="form-control" style="width:100px" value="8" min="2" max="20"></div>
+      <button id="g-run-evo" class="btn btn-primary" onclick="runEvolution()"><i class="fa fa-dna me-1"></i>진화 실행</button>
+      <div id="g-evo-prog" style="display:none; margin-top:16px">
+        <div class="progress mb-2"><div id="g-evo-bar" class="progress-bar" style="width:0%"></div></div>
+        <div class="log-console" id="g-evo-log"></div>
+      </div>
+      <div id="g-evo-result"></div>
+    </div>
+
+    <!-- STEP 5 — 비교 -->
+    <div class="wiz-step" data-step="5" style="display:none">
+      <div class="wiz-h">5단계 · 인간 vs AI 비교</div>
+      <div class="wiz-sub">방금 만든 LLM 규칙이 사람 규칙을 이겼는지 확인합니다.</div>
+      <div id="g-compare"></div>
+    </div>
+
+    <!-- STEP 6 — 보고서 -->
+    <div class="wiz-step" data-step="6" style="display:none">
+      <div class="wiz-h">6단계 · 보고서</div>
+      <div class="wiz-sub">전체 결과를 보고서로 내보냅니다.</div>
+      <div class="d-flex gap-2 mb-3">
+        <button class="btn btn-primary" onclick="genReport('markdown')"><i class="fa fa-file-code me-1"></i>Markdown</button>
+        <button class="btn btn-outline-secondary" onclick="genReport('pdf')"><i class="fa fa-file-pdf me-1"></i>PDF</button>
+      </div>
+      <div id="g-report" class="md-preview" style="background:var(--bg-surface); border:1px solid var(--border); border-radius:8px; padding:14px; max-height:420px; overflow-y:auto; font-size:12px"></div>
+    </div>
+
+    <!-- nav -->
+    <div class="wiz-nav">
+      <button id="wiz-back" class="btn btn-outline-secondary" onclick="goPrev()"><i class="fa fa-arrow-left me-1"></i>이전</button>
+      <button id="wiz-next" class="btn btn-primary" onclick="goNext()">다음 <i class="fa fa-arrow-right ms-1"></i></button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<script>
+const STEPS = [
+  '공장 선택', '상황 설정', '기준 성적', 'AI 진화', '인간 vs AI', '보고서'
+];
+const W = {
+  step: 1,
+  family: '', instance: '', instInfo: null,
+  scenario: 'S1', sp: { s1_ratio:0.3, s1_k:1.5, s1_timing_min:0.1, s1_timing_max:0.3,
+                        s2_ddf:0.5, s2_n_urgent:1, s2_arrival_min:0.2, s2_arrival_max:0.5 },
+  nSeeds: 20,
+  baseDone: false, bestBaseId:'', bestBaseMean:0,
+  method: 'P2', evoDone: false, evoResult: null,
+  allBench: {},
+};
+
+// ── progress dots + gating ───────────────────────────────
+function renderDots() {
+  const dots = document.getElementById('wiz-dots');
+  let html = '';
+  for (let i = 1; i <= 6; i++) {
+    const cls = i < W.step ? 'done' : (i === W.step ? 'active' : '');
+    html += `<div class="wiz-dot ${cls}"></div>`;
+    if (i < 6) html += `<div class="wiz-line ${i < W.step ? 'done' : ''}"></div>`;
+  }
+  dots.innerHTML = html;
+  document.getElementById('wiz-steplabel').textContent = `${W.step} / 6 — ${STEPS[W.step-1]}`;
+}
+
+function showStep(n) {
+  W.step = n;
+  document.querySelectorAll('.wiz-step').forEach(el => {
+    el.style.display = (+el.dataset.step === n) ? 'block' : 'none';
+  });
+  document.getElementById('wiz-back').style.visibility = n === 1 ? 'hidden' : 'visible';
+  const next = document.getElementById('wiz-next');
+  next.textContent = n === 6 ? '완료' : '다음';
+  next.disabled = !canAdvance(n);
+  renderDots();
+  if (n === 5) renderCompare();
+}
+
+function canAdvance(n) {
+  if (n === 1) return !!W.instance;
+  if (n === 3) return W.baseDone;        // 기준 성적 완료해야 진행
+  if (n === 4) return W.evoDone;         // 진화 완료해야 진행
+  return true;
+}
+function refreshNext() { document.getElementById('wiz-next').disabled = !canAdvance(W.step); }
+
+function goNext() {
+  if (W.step === 6) { toast('워크플로우 완료! 🎉', 'success'); return; }
+  if (!canAdvance(W.step)) return;
+  showStep(W.step + 1);
+}
+function goPrev() { if (W.step > 1) showStep(W.step - 1); }
+
+// ── STEP 1 — benchmark ───────────────────────────────────
+async function loadBench() {
+  const d = await API.get('/api/benchmarks');
+  if (!d.ok) return;
+  W.allBench = d.data;
+  const fams = Object.keys(d.data);
+  document.getElementById('g-family').innerHTML =
+    fams.map(f => `<option value="${f}">${f}</option>`).join('');
+  W.family = fams[0];
+  onFamily();
+}
+function onFamily() {
+  W.family = document.getElementById('g-family').value;
+  const insts = W.allBench[W.family] || [];
+  document.getElementById('g-instance').innerHTML =
+    insts.map(n => `<option value="${n}">${n}</option>`).join('');
+  onInstance();
+}
+async function onInstance() {
+  W.instance = document.getElementById('g-instance').value;
+  const d = await API.get(`/api/benchmark/${W.family}/${W.instance}`);
+  if (d.ok) {
+    W.instInfo = d.data;
+    document.getElementById('g-inst-info').textContent =
+      `${d.data.n_jobs}작업 · ${d.data.n_machines}기계 · ${d.data.n_operations}오퍼레이션 · 유연성 ${d.data.flexibility}`;
+  }
+  refreshNext();
+}
+
+// ── STEP 2 — scenario ────────────────────────────────────
+function pickScn(s) {
+  W.scenario = s;
+  document.querySelectorAll('[data-scn]').forEach(el =>
+    el.classList.toggle('sel', el.dataset.scn === s));
+  renderScnParams();
+}
+function renderScnParams() {
+  const c = document.getElementById('scn-params');
+  if (W.scenario === 'S0') { c.innerHTML = '<div class="wiz-sub">정상 운영 — 추가 설정 없음.</div>'; return; }
+  if (W.scenario === 'S1') {
+    c.innerHTML = `
+      <div class="param-row"><label>영향받는 작업 비율</label>
+        <input type="range" class="form-range" min="0.1" max="1" step="0.05" value="${W.sp.s1_ratio}"
+          oninput="W.sp.s1_ratio=+this.value; this.nextElementSibling.textContent=this.value"><span>${W.sp.s1_ratio}</span></div>
+      <div class="param-row"><label>지연 배수 (k)</label>
+        <input type="range" class="form-range" min="0.5" max="5" step="0.5" value="${W.sp.s1_k}"
+          oninput="W.sp.s1_k=+this.value; this.nextElementSibling.textContent=this.value"><span>${W.sp.s1_k}</span></div>
+      <div class="wiz-sub">비율↑·배수↑ 일수록 교란이 심해집니다. (중간값 권장: 0.3 / 1.5)</div>`;
+  } else {
+    c.innerHTML = `
+      <div class="param-row"><label>납기 여유 계수</label>
+        <input type="range" class="form-range" min="0.1" max="2" step="0.1" value="${W.sp.s2_ddf}"
+          oninput="W.sp.s2_ddf=+this.value; this.nextElementSibling.textContent=this.value"><span>${W.sp.s2_ddf}</span></div>
+      <div class="param-row"><label>긴급 주문 건수</label>
+        <input type="number" class="form-control" style="width:90px" min="1" max="5" value="${W.sp.s2_n_urgent}"
+          oninput="W.sp.s2_n_urgent=+this.value"></div>
+      <div class="wiz-sub">계수↓ 일수록 납기가 촉박합니다.</div>`;
+  }
+}
+
+// ── STEP 3 — baselines ───────────────────────────────────
+async function runBaselines() {
+  const btn = document.getElementById('g-run-base');
+  btn.disabled = true;
+  document.getElementById('g-base-prog').style.display = 'block';
+  document.getElementById('g-base-result').innerHTML = '';
+  const log = document.getElementById('g-base-log'); log.textContent = '';
+  const body = { instance:W.instance, family:W.family, scenario:W.scenario, n_seeds:W.nSeeds, ...W.sp };
+  const r = await API.post('/api/baselines/run', body);
+  if (!r.ok) { toast('실행 실패','error'); btn.disabled=false; return; }
+  streamTask(r.task_id, {
+    onLog: m => { log.textContent += m + '\n'; log.scrollTop = log.scrollHeight; },
+    onDone: res => {
+      const results = res.results;
+      const rows = Object.entries(results).sort((a,b)=>a[1].mean-b[1].mean);
+      W.bestBaseId = rows[0][0]; W.bestBaseMean = rows[0][1].mean; W.baseDone = true;
+      let t = '<table class="wiz-mini"><tr><th>규칙</th><th>AT 평균</th><th>납기위반%</th></tr>';
+      rows.slice(0,5).forEach(([id,s]) =>
+        t += `<tr><td>${id}${id===W.bestBaseId?' 🏆':''}</td><td>${s.mean.toFixed(1)}</td><td>${s.ptj.toFixed(0)}%</td></tr>`);
+      t += '</table>';
+      document.getElementById('g-base-result').innerHTML =
+        `<div class="wiz-result"><b>최강 기준 규칙: ${W.bestBaseId}</b> (AT ${W.bestBaseMean.toFixed(1)})<br>
+         <small>진화가 이 숫자를 이기면 LLM 승리입니다. 상위 5개:</small>${t}</div>`;
+      btn.disabled = false; refreshNext();
+    },
+    onError: e => { toast('오류: '+e,'error'); btn.disabled=false; }
+  });
+}
+
+// ── STEP 4 — evolution ───────────────────────────────────
+function pickM(m) {
+  W.method = m;
+  document.querySelectorAll('[data-m]').forEach(el => el.classList.toggle('sel', el.dataset.m === m));
+}
+async function runEvolution() {
+  const btn = document.getElementById('g-run-evo');
+  btn.disabled = true;
+  document.getElementById('g-evo-prog').style.display = 'block';
+  document.getElementById('g-evo-result').innerHTML = '';
+  const log = document.getElementById('g-evo-log'); log.textContent = '';
+  const niter = +document.getElementById('g-niter').value || 8;
+  const body = { instance:W.instance, family:W.family, scenario:W.scenario,
+                 method:W.method, n_seeds:W.nSeeds, n_iter:niter, ...W.sp };
+  const r = await API.post('/api/evolution/start', body);
+  if (!r.ok) { toast('실행 실패','error'); btn.disabled=false; return; }
+  streamTask(r.task_id, {
+    onLog: m => { log.textContent += m + '\n'; log.scrollTop = log.scrollHeight; },
+    onProgress: p => { document.getElementById('g-evo-bar').style.width = Math.min(p,100)+'%'; },
+    onDone: res => {
+      W.evoResult = res; W.evoDone = true;
+      const br = res.best_rule || {};
+      const traj = (res.iteration_best_at||[]).map(x=>x.toFixed(1)).join(' → ');
+      document.getElementById('g-evo-result').innerHTML =
+        `<div class="wiz-result"><b>진화 완료</b> — 최종 규칙: ${br.rule_id} (${br.operator_kr||br.operator})<br>
+         <small>세대별 최적 AT: ${traj}</small></div>`;
+      btn.disabled = false; refreshNext();
+    },
+    onError: e => { toast('오류: '+e,'error'); btn.disabled=false; }
+  });
+}
+
+// ── STEP 5 — compare ─────────────────────────────────────
+function renderCompare() {
+  const s = (W.evoResult && W.evoResult.summary) || {};
+  const ari = s.ari != null ? s.ari : 0;
+  const llmMean = s.mean != null ? s.mean : 0;
+  const win = ari > 0.5;
+  const tie = Math.abs(ari) <= 0.5;
+  const verdict = win ? '🎉 LLM 승리' : (tie ? '🤝 동점 (LLM이 최강 규칙을 재발견)' : '기준 규칙 우세');
+  document.getElementById('g-compare').innerHTML = `
+    <div class="wiz-result ${win||tie?'':'loss'}">
+      <div class="big-metric">${ari>=0?'+':''}${ari.toFixed(1)}%</div>
+      <div>${verdict}</div>
+    </div>
+    <table class="wiz-mini" style="margin-top:16px; width:100%">
+      <tr><th></th><th>규칙</th><th>AT 평균</th></tr>
+      <tr><td>👤 사람 (최강)</td><td>${W.bestBaseId}</td><td>${W.bestBaseMean.toFixed(1)}</td></tr>
+      <tr><td>🤖 LLM 진화</td><td>${(W.evoResult.best_rule||{}).rule_id||'-'}</td><td>${llmMean.toFixed(1)}</td></tr>
+    </table>
+    <div class="wiz-sub" style="margin-top:14px">
+      ARI = (사람 − LLM) / 사람 × 100. 양수면 LLM이 납기 지연을 더 줄인 것입니다.
+      ${tie?'<br>LLM이 사람의 최강 휴리스틱과 동등한 로직을 스스로 찾아냈다는 의미예요.':''}
+    </div>`;
+}
+
+// ── STEP 6 — report ──────────────────────────────────────
+async function genReport(fmt) {
+  const body = { format:fmt, instance:W.instance, family:W.family, scenario:W.scenario,
+                 sections:['benchmark','scenario','baselines','evolution','summary'], include_nl:false };
+  setStatus('보고서 생성 중...','warning');
+  const r = await fetch('/api/report/generate', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  setStatus('준비','success');
+  if (!r.ok) { toast('보고서 생성 실패','error'); return; }
+  const blob = await r.blob();
+  if (fmt === 'markdown') {
+    const text = await blob.text();
+    document.getElementById('g-report').innerHTML = marked.parse(text);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text],{type:'text/markdown'}));
+    a.download = `heuristix_${W.instance}_${W.scenario}.md`; a.click();
+  } else {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `heuristix_${W.instance}_${W.scenario}.pdf`; a.click();
+  }
+  toast('보고서 다운로드 완료!','success');
+}
+
+// ── init ─────────────────────────────────────────────────
+loadBench();
+renderScnParams();
+showStep(1);
+</script>
+{% endblock %}
