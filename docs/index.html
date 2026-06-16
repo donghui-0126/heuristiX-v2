@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>heuristiX — LLM 기반 동적 FJSSP 디스패칭 규칙 진화</title>
+<link rel="stylesheet" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root{ --bg:#0d1117; --surface:#161b22; --border:#30363d; --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --green:#2ea043; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--text);
+        font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif; line-height:1.65; }
+  .wrap{ max-width:880px; margin:0 auto; padding:64px 24px 96px; }
+  .hero{ text-align:center; margin-bottom:48px; }
+  .hero h1{ font-size:52px; margin:0 0 8px; background:linear-gradient(135deg,#58a6ff,#a371f7);
+            -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .hero p{ font-size:18px; color:var(--muted); margin:0 auto; max-width:600px; }
+  .badges{ margin-top:16px; }
+  .badge{ display:inline-block; font-size:12px; color:var(--muted); border:1px solid var(--border);
+          border-radius:20px; padding:3px 12px; margin:3px; }
+  .cards{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:40px 0; }
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:24px;
+         text-decoration:none; color:var(--text); transition:all .15s; display:block; }
+  .card:hover{ border-color:var(--accent); transform:translateY(-2px); }
+  .card .ic{ font-size:28px; }
+  .card h3{ margin:10px 0 4px; font-size:18px; }
+  .card p{ margin:0; font-size:13px; color:var(--muted); }
+  .card.primary{ border-color:var(--accent); background:rgba(88,166,255,.08); }
+  h2{ font-size:22px; margin:48px 0 14px; border-bottom:1px solid var(--border); padding-bottom:8px; }
+  table{ width:100%; border-collapse:collapse; font-size:14px; margin:8px 0; }
+  th,td{ border:1px solid var(--border); padding:8px 12px; text-align:left; }
+  th{ background:rgba(255,255,255,.04); }
+  .note{ background:rgba(46,160,67,.08); border:1px solid rgba(46,160,67,.35); border-radius:10px;
+         padding:14px 18px; font-size:14px; }
+  .note code{ background:#0d1117; padding:2px 6px; border-radius:5px; font-size:12px; }
+  .btn{ display:inline-block; background:var(--accent); color:#fff; text-decoration:none;
+        padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; margin-top:10px; }
+  .btn.ghost{ background:transparent; border:1px solid var(--border); color:var(--text); }
+  footer{ text-align:center; color:var(--muted); font-size:12px; margin-top:64px; }
+  @media(max-width:640px){ .cards{ grid-template-columns:1fr; } .hero h1{ font-size:38px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <h1>heuristiX</h1>
+    <p>공급망 교란 상황에서 <b>LLM이 사람 전문가보다 나은 생산 스케줄링 규칙</b>을
+       스스로 진화시킬 수 있는가? — 동적 FJSSP 디스패칭 규칙 자동 진화 연구</p>
+    <div class="badges">
+      <span class="badge">FJSSP</span>
+      <span class="badge">LLM 진화 (EoH)</span>
+      <span class="badge">Rust 시뮬레이터</span>
+      <span class="badge">공급망 교란 S1·S2</span>
+    </div>
+  </div>
+
+  <div class="cards">
+    <a class="card primary" href="slides/">
+      <div class="ic">📊</div>
+      <h3>발표 슬라이드</h3>
+      <p>연구 배경 · 방법론 · 결과 26장 (← / → 키로 넘김)</p>
+    </a>
+    <a class="card" href="slides/heuristiX_slides.pdf">
+      <div class="ic">📄</div>
+      <h3>슬라이드 PDF</h3>
+      <p>발표 자료 PDF 다운로드</p>
+    </a>
+    <a class="card" href="https://github.com/donghui-0126/heuristiX-v2">
+      <div class="ic">💻</div>
+      <h3>GitHub 저장소</h3>
+      <p>소스 코드 · Rust 배터리 · Python 대시보드</p>
+    </a>
+    <a class="card" href="https://github.com/donghui-0126/heuristiX-v2/blob/main/dashboard/GUIDE.md">
+      <div class="ic">📖</div>
+      <h3>대시보드 사용 가이드</h3>
+      <p>워크벤치 단계별 사용법</p>
+    </a>
+  </div>
+
+  <h2>🎯 무엇을 하는 프로젝트인가</h2>
+  <p>실제 공장의 복잡성을 시뮬레이션으로 재현하고, 그 위에서 LLM이 디스패칭 규칙(우선순위 함수)을
+     세대를 거쳐 진화시켜 사람이 손으로 만든 고전 휴리스틱과 비교합니다.</p>
+  <table>
+    <tr><th>현실 공장</th><th>이 프로젝트</th></tr>
+    <tr><td>주문 → 여러 공정 순서</td><td>작업(job) → 공정(operation)</td></tr>
+    <tr><td>공정마다 가능한 설비가 다름</td><td><b>유연성</b> = 공정당 사용 가능 기계 수 (JSSP↔FJSSP)</td></tr>
+    <tr><td>고객 납기 / 지연 비용</td><td>납기일 / 평균 지연(AT) 지표</td></tr>
+    <tr><td>부품 입고 지연 · 긴급 주문</td><td>교란 시나리오 S1 · S2</td></tr>
+    <tr><td>현장의 "다음에 뭘 할지" 결정</td><td>디스패칭 규칙(우선순위 함수)</td></tr>
+    <tr><td>전문가가 수개월 튜닝</td><td><b>LLM이 분 단위로 규칙 진화</b></td></tr>
+  </table>
+
+  <h2>🚀 인터랙티브 대시보드</h2>
+  <div class="note">
+    실험을 직접 돌리는 워크벤치(공장 선택 → 시나리오 → 진화 → 비교 → 보고서)는
+    <b>Python 백엔드(시뮬레이션 · LLM 호출)가 필요</b>하여 GitHub Pages(정적 호스팅)로는 띄울 수 없습니다.
+    아래 둘 중 하나로 실행하세요.
+    <div style="margin-top:12px">
+      <a class="btn" href="https://render.com/deploy?repo=https://github.com/donghui-0126/heuristiX-v2">▶ Render에 1-클릭 배포</a>
+      <a class="btn ghost" href="https://github.com/donghui-0126/heuristiX-v2/tree/main/dashboard">로컬 실행 방법</a>
+    </div>
+    <div style="margin-top:12px; font-size:13px; color:var(--muted)">
+      로컬: <code>cd dashboard &amp;&amp; pip install -r requirements.txt &amp;&amp; python3 seed.py &amp;&amp; python3 app.py</code>
+      → <code>http://localhost:5000</code>
+    </div>
+  </div>
+
+  <footer>
+    heuristiX · LLM-based dispatching rule evolution for dynamic FJSSP under supply-chain disruption<br>
+    이 페이지는 GitHub Pages로 배포된 정적 소개·슬라이드입니다.
+  </footer>
+</div>
+</body>
+</html>
