@@ -141,12 +141,17 @@ def _task_error(tid: str, err: str):
 # ---------------------------------------------------------------------------
 
 @app.route("/")
-def page_home():
-    return render_template("index.html", active="home")
+def page_start():
+    # 시작 화면 = 가이드 마법사
+    return render_template("guide.html", active="guide")
 
 @app.route("/guide")
 def page_guide():
     return render_template("guide.html", active="guide")
+
+@app.route("/home")
+def page_home():
+    return render_template("index.html", active="home")
 
 @app.route("/benchmark-manager")
 def page_benchmark():
