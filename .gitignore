@@ -33,6 +33,7 @@ hub/workspace/*/
 # Generated PDFs
 *.pdf
 !docs/*.pdf
+!docs/**/*.pdf
 
 
 # Dashboard (Flask workbench)
