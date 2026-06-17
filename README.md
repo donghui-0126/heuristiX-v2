@@ -12,7 +12,7 @@
 ![Dashboard](https://img.shields.io/badge/UI-Flask%20Workbench-000?logo=flask)
 ![License](https://img.shields.io/badge/status-research-purple)
 
-### 🌐 [프로젝트 페이지 · 발표 슬라이드 →](https://donghui-0126.github.io/heuristiX-v2/)
+### 🚀 [라이브 대시보드](https://heuristix.onrender.com) · 🌐 [프로젝트 페이지](https://donghui-0126.github.io/heuristiX-v2/)
 
 </div>
 
