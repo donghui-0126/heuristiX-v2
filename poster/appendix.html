@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>heuristiX 부록</title>
+<link rel="stylesheet" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root{ --navy:#2b3a67; --navy2:#3a4d86; --accent:#4a6fa5; --light:#eef1f7; --line:#d4dae6; --muted:#5a6678; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  @page{ size:594mm 841mm; margin:0; }
+  body{ font-family:"Pretendard Variable",Pretendard,sans-serif; background:#fff; color:#222;
+        -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .poster{ width:1280px; margin:0 auto; background:#fff; display:flex; flex-direction:column; }
+  header{ background:linear-gradient(135deg,var(--navy),var(--navy2)); color:#fff; padding:26px 50px; text-align:center; }
+  header h1{ font-size:32px; font-weight:800; letter-spacing:-.3px; }
+  header .sub{ font-size:16px; opacity:.92; margin-top:8px; }
+  .body{ display:grid; grid-template-columns:1fr 1fr; gap:18px; padding:20px; background:#f6f8fc; }
+  .col{ display:flex; flex-direction:column; gap:18px; }
+  .sec{ background:#fff; border:1px solid var(--line); border-radius:7px; overflow:hidden; }
+  .sec > .hd{ background:var(--navy); color:#fff; font-size:17px; font-weight:700; padding:9px 16px;
+              display:flex; align-items:center; gap:9px; }
+  .sec > .hd .no{ background:#fff; color:var(--navy); border-radius:50%; width:24px; height:24px;
+                  display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; }
+  .sec .bd{ padding:14px 17px; font-size:14px; line-height:1.6; }
+  .sec .bd b{ color:var(--navy); }
+
+  /* 진화 루프 다이어그램 */
+  .flow{ display:flex; flex-direction:column; gap:9px; }
+  .step{ display:flex; gap:11px; align-items:flex-start; }
+  .step .n{ flex-shrink:0; width:26px; height:26px; border-radius:50%; background:var(--accent); color:#fff;
+            font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; }
+  .step .tx{ font-size:13.5px; line-height:1.5; }
+  .step .tx b{ color:var(--navy); }
+  .loopback{ font-size:12.5px; color:var(--accent); font-weight:700; margin:2px 0 0 37px; }
+
+  /* 궤적 막대 */
+  .traj{ margin-top:10px; }
+  .trow{ display:flex; align-items:center; gap:8px; font-size:12.5px; margin-bottom:5px; }
+  .trow .g{ width:74px; color:var(--muted); }
+  .trow .bar{ height:15px; background:var(--accent); border-radius:3px; }
+  .trow .v{ width:46px; text-align:right; color:var(--navy); font-weight:700; }
+
+  /* 진화 규칙 카드 */
+  .rule{ border:1px solid var(--line); border-radius:6px; overflow:hidden; margin-bottom:12px; }
+  .rule:last-child{ margin-bottom:0; }
+  .rule .rh{ background:var(--light); padding:7px 12px; font-size:13.5px; font-weight:700; color:var(--navy);
+             display:flex; justify-content:space-between; align-items:center; }
+  .rule .rh .ari{ color:#1a7a3a; font-size:13px; }
+  .rule .code{ background:#0d1117; color:#9fd2ff; font-family:Consolas,monospace; font-size:12px;
+               line-height:1.5; padding:10px 12px; white-space:pre-wrap; word-break:keep-all; }
+  .rule .desc{ padding:8px 12px; font-size:12.5px; color:#3a414e; line-height:1.5; }
+  .rule .desc b{ color:var(--navy); }
+
+  table{ width:100%; border-collapse:collapse; font-size:13px; margin-top:4px; }
+  th,td{ border:1px solid var(--line); padding:6px 9px; text-align:left; vertical-align:top; }
+  th{ background:var(--navy); color:#fff; font-weight:600; text-align:center; }
+  td.c{ text-align:center; font-weight:700; color:var(--navy); white-space:nowrap; }
+  .cap{ font-size:12px; color:var(--muted); margin-top:8px; line-height:1.5; }
+  footer{ background:var(--navy); color:#cfd6e6; font-size:13px; padding:11px 50px;
+          display:flex; justify-content:space-between; }
+  .tag{ background:#fff; color:var(--navy); font-size:12px; font-weight:700; border-radius:12px; padding:2px 11px; }
+</style>
+</head>
+<body>
+<div class="poster">
+
+  <header>
+    <h1>부록 — LLM이 진화시킨 휴리스틱은 어떻게 발전했나</h1>
+    <div class="sub">진화 메커니즘 · 유연도에 따른 규칙 발전 · 인간 규칙으로부터의 변형</div>
+  </header>
+
+  <div class="body">
+
+    <!-- 좌 : 진화 과정 + 궤적 -->
+    <div class="col">
+      <div class="sec">
+        <div class="hd"><span class="no">A</span> 한 세대 안에서 규칙이 발전하는 과정</div>
+        <div class="bd">
+          <p style="margin-bottom:10px"><b>초기 집단</b> = 인간 규칙 B1~B5 + LLM 생성 5개 (총 10개)에서 출발한다.
+             아래 4단계를 <b>20세대</b> 반복하며 규칙을 다듬는다.</p>
+          <div class="flow">
+            <div class="step"><span class="n">1</span><span class="tx"><b>평가</b> — 각 규칙을 5개 교란 환경에서 실행, 평균 AT 측정 (적합도 = −AT)</span></div>
+            <div class="step"><span class="n">2</span><span class="tx"><b>선택</b> — 적합도 상위 7개 생존</span></div>
+            <div class="step"><span class="n">3</span><span class="tx"><b>생성</b> — LLM-A가 4개 연산자로 새 규칙 8개 작성<br>
+              · <b>변형</b> 구조 일부 변경 · <b>교차</b> 두 규칙 장점 결합 · <b>반성</b> 성능 원인 분석 후 수정 · <b>단순화</b> 군더더기 제거</span></div>
+            <div class="step"><span class="n">4</span><span class="tx"><b>제거</b> — 실행 불가·저성능 규칙 폐기, 상위 7 + 신규 8 = 15개로 다음 세대</span></div>
+          </div>
+          <div class="loopback">↺ 20세대 반복 → 최적 규칙 도출</div>
+
+          <p style="margin-top:14px;font-weight:700;color:var(--navy)">세대가 진행되며 best AT가 낮아진다 (S1·유연도 0.5 예시)</p>
+          <div class="traj">
+            <div class="trow"><span class="g">초기(WMDD)</span><div class="bar" style="width:300px"></div><span class="v">56.9</span></div>
+            <div class="trow"><span class="g">중반 세대</span><div class="bar" style="width:285px"></div><span class="v">54.1</span></div>
+            <div class="trow"><span class="g">후반 세대</span><div class="bar" style="width:271px"></div><span class="v">51.4</span></div>
+          </div>
+          <p class="cap">최강 인간 규칙 WMDD(56.9)에서 출발해, 진화를 거쳐 <b>AT 51.4 (ARI +9.7%)</b>의 LLM 규칙으로 발전했다.
+            (값은 100회 평균 AT)</p>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="hd"><span class="no">C</span> 무엇을 인간 규칙에서 가져왔나 (변형 관점)</div>
+        <div class="bd">
+          <p style="margin-bottom:6px">+9.7% 규칙 <code style="font-size:12px">exp(−0.125·max(0, 납기−(현재+남은작업+부품가용시각))) ÷ 남은작업</code> 의 구성요소 출처:</p>
+          <table>
+            <tr><th>진화 규칙 구성요소</th><th>출처</th></tr>
+            <tr><td><b>exp(−납기여유)</b> 지수형 납기 가중</td><td class="c">WMDD · ATC</td></tr>
+            <tr><td><b>÷ 남은작업(remaining_pt)</b> 분모</td><td class="c">CR (임계율)</td></tr>
+            <tr><td><b>−부품가용시각</b> 을 납기여유에 삽입</td><td class="c">🆕 외부 충격 변수<br>(인간 규칙엔 없음)</td></tr>
+          </table>
+          <p class="cap">→ LLM은 <b>기존 규칙들의 장점을 조합·변형</b>하고, 고정 규칙엔 없던 <b>부품 가용 시각</b>을
+            끼워 넣어 부품 지연 작업의 납기 위험을 직접 반영하는 새 규칙을 만들었다.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 우 : 유연도별 발전 결과 -->
+    <div class="col">
+      <div class="sec">
+        <div class="hd"><span class="no">B</span> 유연도가 커질수록 규칙이 이렇게 발전 (S1 · 부품 지연)</div>
+        <div class="bd">
+          <div class="rule">
+            <div class="rh"><span>유연도 0.0 — AT 159.9</span><span class="ari">ARI +0.1% vs SPT</span></div>
+            <div class="code">urgent_order_flag × (납기 − 현재 + 1) ÷ (남은작업 + 1)
+  − 처리시간 ÷ max(1, 기계가용시각 − 현재)  − 처리시간</div>
+            <div class="desc"><b>단순한 SPT형</b> — 처리시간을 강하게 반영하고 긴급 작업에 약간 가중. 대체 기계가 없어
+              "짧은 작업 먼저"가 지배적.</div>
+          </div>
+          <div class="rule">
+            <div class="rh"><span>유연도 0.5 — AT 51.4</span><span class="ari">ARI +9.7% vs WMDD ★</span></div>
+            <div class="code">exp(−0.125 × max(0, 납기 − (현재 + 남은작업 + 부품가용시각)))
+  ÷ 남은작업</div>
+            <div class="desc"><b>정교한 납기·부품 결합형</b> — 지수형 납기 여유에 <b>부품 가용 시각</b>을 더해 부품 지연
+              위험을 세밀하게 반영. 본 연구 최고 성과.</div>
+          </div>
+          <div class="rule">
+            <div class="rh"><span>유연도 1.0 — AT 42.8</span><span class="ari">ARI +5.2% vs CR</span></div>
+            <div class="code">exp(−max(0, 납기 − 현재 − 0.87 × 남은작업))
+  + (긴급이면) × 1000</div>
+            <div class="desc"><b>지수형 납기 + 긴급 분기형</b> — 대체 기계가 충분해 납기 위험 중심으로 단순화하되,
+              긴급 작업은 큰 가산으로 분리 처리.</div>
+          </div>
+          <p class="cap">유연도가 0 → 1로 커질수록, 진화 규칙은 <b>처리시간(SPT) 중심</b>에서
+            <b>납기·부품·긴급 변수를 결합한 지수형 구조</b>로 발전한다. 즉 환경이 복잡해질수록
+            LLM이 더 많은 변수를 조합한 정교한 규칙을 찾아낸다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span>heuristiX 부록 · 진화 규칙은 flex_sweep_v3 실측(100회 평균) 기준</span>
+    <span class="tag">github.com/donghui-0126/heuristiX-v2</span>
+  </footer>
+</div>
+</body>
+</html>

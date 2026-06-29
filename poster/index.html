@@ -11,10 +11,11 @@
     --line:#d4dae6; --ink:#222; --muted:#5a6678;
   }
   *{ box-sizing:border-box; margin:0; padding:0; }
-  @page{ size:264.6mm 457.7mm; margin:0; }
+  @page{ size:594mm 841mm; margin:0; }   /* A1 세로 */
   body{ font-family:"Pretendard Variable",Pretendard,sans-serif; background:#fff; color:var(--ink);
         -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-  .poster{ width:1000px; height:1730px; margin:0 auto; background:#fff; display:flex; flex-direction:column; }
+  /* A1 세로 비율(0.707) — 폭 1200px, 높이 1200×√2 = 1697px */
+  .poster{ width:1280px; margin:0 auto; background:#fff; display:flex; flex-direction:column; }
 
   /* 헤더 밴드 */
   header{ background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%); color:#fff;
@@ -24,7 +25,30 @@
   header .auth{ font-size:14px; opacity:.85; margin-top:8px; }
 
   /* 본문 2단 */
-  .body{ flex:1; display:grid; grid-template-columns:1fr 1fr; gap:18px; padding:20px; background:#f6f8fc; }
+  .body{ display:grid; grid-template-columns:1fr 1fr; gap:18px; padding:20px 20px 12px; background:#f6f8fc; }
+
+  /* 하단 전폭 띠 : 진화 규칙 + 약어 */
+  .band{ padding:0 20px 18px; background:#f6f8fc; }
+  .evoline{ background:#0d1117; border-radius:6px; padding:10px 14px; margin-bottom:12px; }
+  .evoline .t{ color:#ffd479; font-weight:700; font-size:13.5px; }
+  .evoline code{ color:#9fd2ff; font-family:Consolas,monospace; font-size:12.5px; }
+  .evoline .x{ color:#c9d4e6; font-size:12.5px; }
+  .bcard{ background:#fff; border:1px solid var(--line); border-radius:7px; overflow:hidden; }
+  .bcard > .hd{ background:var(--navy); color:#fff; font-size:16px; font-weight:700; padding:8px 14px;
+                display:flex; align-items:center; gap:8px; }
+  .bcard > .hd .em{ font-size:12px; font-weight:600; opacity:.85; }
+  .bcard .bd{ padding:12px 14px; }
+  .evocode{ background:#0d1117; color:#9fd2ff; font-family:"D2Coding",Consolas,monospace; font-size:12.5px;
+            line-height:1.5; padding:11px 13px; border-radius:6px; margin:0 0 10px; white-space:pre-wrap;
+            word-break:keep-all; }
+  .evopt{ font-size:13px; line-height:1.6; margin:0 0 0 17px; }
+  .evopt li{ font-size:13px; margin-bottom:5px; }
+  .evopt b{ color:var(--navy); }
+  .evonote{ font-size:12.5px; color:#3a414e; margin-top:8px; padding:7px 10px; background:var(--light);
+            border-left:4px solid var(--accent); border-radius:4px; }
+  .gloss{ font-size:12px; line-height:1.65; color:#2c333f; }
+  .gloss .grp{ font-weight:700; color:var(--accent); }
+  .gloss b{ color:var(--navy); }
   .col{ display:flex; flex-direction:column; gap:16px; min-height:0; }
 
   /* 섹션 카드 */
@@ -225,6 +249,26 @@
             <li>향후 : multi-urgent · cross-scenario memory · 복합(S1+S2) 시나리오 검증</li>
           </ul>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ 하단 전폭 : 진화 규칙 한 줄 + 약어 ════ -->
+  <div class="band">
+    <div class="evoline">
+      <span class="t">🧬 우리가 진화시킨 규칙 (S1·유연도 0.5, ARI +9.7%) :</span>
+      <code> exp(−0.125 × max(0, 납기−(현재+남은작업+부품가용시각))) ÷ 남은작업</code><br>
+      <span class="x">→ 인간 규칙 <b style="color:#fff">WMDD·ATC</b>의 지수형 납기 가중 + <b style="color:#fff">CR</b>의 잔여작업 분모를 <b style="color:#fff">조합·변형</b>하고, 고정 규칙엔 없던 <b style="color:#fff">부품 가용 시각</b>(외부 충격 변수)을 추가. <i>(세대별 발전 과정은 부록 참조)</i></span>
+    </div>
+    <div class="bcard">
+      <div class="hd">📖 약어 정리</div>
+      <div class="bd gloss">
+        <span class="grp">기준 규칙 (인간 설계)</span> &nbsp;
+        <b>FIFO</b> 선입선출 · <b>EDD</b> 최단납기 · <b>SPT</b> 최단처리시간 · <b>CR</b> 임계율(여유÷잔여) ·
+        <b>Urgency</b> 긴급가중 · <b>WMDD</b> 가중수정납기 · <b>MDD</b> 수정납기 · <b>COVERT</b> 비용기반긴급도 ·
+        <b>ATC</b> 조정납기비용 · <b>LPT</b> 최장처리시간 · <b>MWKR</b> 최다잔여작업 · <b>LWKR</b> 최소잔여작업
+        <br><span class="grp">지표</span> &nbsp;<b>AT</b> 평균납기초과 · <b>MIT</b> 설비유휴시간 · <b>PTJ</b> 납기초과작업비율 · <b>ARI</b> 평균상대개선률
+        &nbsp; <span class="grp">기타</span> &nbsp;<b>FJSSP</b> 유연 잡샵 스케줄링 · <b>EoH</b> 휴리스틱 진화 · <b>P1/P2/P3</b> 충격변수·경험저장 변형법
       </div>
     </div>
   </div>
