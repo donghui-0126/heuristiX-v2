@@ -64,6 +64,11 @@
 
   .subhd{ font-size:28px; font-weight:700; color:var(--navy); margin:0 0 7px;
           padding-left:10px; border-left:4px solid var(--accent); }
+  /* 방법 하위 번호 배지 */
+  .subhd.num{ display:flex; align-items:center; gap:11px; border-left:none; padding-left:0; }
+  .subhd.num .sn{ flex-shrink:0; width:40px; height:40px; background:var(--accent); color:#fff;
+                  border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+                  font-size:23px; font-weight:800; }
   .block + .block{ margin-top:10px; padding-top:9px; border-top:1px dashed var(--line); }
 
   ul{ margin:4px 0 0 18px; }
@@ -167,7 +172,7 @@
         <div class="hd"><span class="no">3</span> 연구 방법</div>
         <div class="bd">
           <div class="block">
-            <div class="subhd">① 문제 구조 &amp; 시나리오</div>
+            <div class="subhd num"><span class="sn">1</span> 문제 구조 &amp; 시나리오</div>
             <p>기계 유휴 시 <b>priority(job, op, machine, state)</b>로 후보 점수를 매겨 최고 점수 배정 (입력 변수 9개).</p>
             <table>
               <tr><th>시나리오</th><th>내용</th><th>변경 변수</th></tr>
@@ -178,7 +183,7 @@
           </div>
 
           <div class="block">
-            <div class="subhd">② 비교 기준 규칙 12종</div>
+            <div class="subhd num"><span class="sn">2</span> 비교 기준 규칙 12종</div>
             <p>고전 규칙을 비교 기준으로 사용 (최강 규칙 대비 개선률 산출).</p>
             <ul>
               <li><b>단순</b> : FIFO · EDD · SPT · CR · Urgency</li>
@@ -187,7 +192,7 @@
           </div>
 
           <div class="block">
-            <div class="subhd">③ LLM 규칙 진화 (EoH)</div>
+            <div class="subhd num"><span class="sn">3</span> LLM 규칙 진화 (EoH)</div>
             <p><b>LLM-A</b>가 상위 규칙에서 새 우선순위 함수를 생성, 시뮬레이션 평가로 약한 규칙 제거.</p>
             <ul>
               <li><b>변형 · 교차 · 반성 · 단순화</b> 4개 진화 연산자</li>
@@ -199,23 +204,22 @@
             </table>
             <p class="cap">시뮬레이터 = <b>Rust</b> · LLM = <b>GPT-4o-mini</b> · 지표 = AT·MIT·PTJ·개선률</p>
           </div>
+
+          <div class="block">
+            <div class="subhd num"><span class="sn">4</span> 현실 이벤트 변환</div>
+            <p>현장 담당자가 <b>겪은 사건을 문장으로 입력</b>하면, LLM이 강도·범위를 해석해
+               시뮬레이션 <b>S1·S2 파라미터로 자동 변환</b>한다.</p>
+            <div class="ex">
+              <div><span class="tag2 ti">입력</span> "부산항 폐쇄로 반도체 부품 입고 <b>7일</b> 지연, <b>심각</b>"</div>
+              <div style="margin-top:5px"><span class="tag2 to">출력</span> <b>S1 부품지연</b> · 영향비율 0.8 · 지연배수 4.0 <small>(+ 근거·영향 요약)</small></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- ════ 2단 : 이벤트변환 · 결과 · 결론 · 약어 ════ -->
+    <!-- ════ 2단 : 결과 · 결론 · 약어 ════ -->
     <div class="col">
-      <div class="sec">
-        <div class="hd" style="font-size:30px">현실 이벤트 → 시뮬레이션 변환</div>
-        <div class="bd">
-          <p>현장 담당자가 <b>겪은 사건을 문장으로 입력</b>하면, LLM이 강도·범위를 해석해 시뮬레이션
-             <b>S1·S2 파라미터로 자동 변환</b> → 실제 충격을 곧바로 실험으로 재현한다.</p>
-          <div class="ex">
-            <div><span class="tag2 ti">입력</span> "부산항 폐쇄로 반도체 부품 입고 <b>7일</b> 지연, <b>심각</b>"</div>
-            <div style="margin-top:5px"><span class="tag2 to">출력</span> <b>S1 부품지연</b> · 영향비율 0.8 · 지연배수 4.0 <small>(+ 설정 근거 · 영향 요약)</small></div>
-          </div>
-        </div>
-      </div>
       <div class="sec">
         <div class="hd"><span class="no">4</span> 연구 결과</div>
         <div class="bd">
@@ -235,10 +239,16 @@
             <p class="cap"><b>제안 규칙의 신규성 (Novelty)</b><br>
               · <b>S1</b> : 기준 규칙에 없는 <b>부품 가용 시각</b>을 납기 여유 항에 결합 → 부품 지연 작업의 위험을 식별<br>
               · <b>S0</b> : 지수형 납기 가중에 <b>긴급도를 곱 연산으로 결합</b>, 잔여 처리시간으로 정규화<br>
-              · <b>S2</b> : 단일 긴급 주문은 MDD가 거의 처리하여 개선 여지 작음<br>· <b>유연도</b> : 0.5가 최적 구간 (유연도 0→1로 AT 자체는 65~81% 감소)</p>
+              · <b>S2</b> : 단일 긴급 주문은 MDD가 거의 처리하여 개선 여지 작음</p>
           </div>
 
-          
+          <div class="block">
+            <div class="subhd">유연도가 AT를 좌우 <span style="font-weight:500;color:var(--muted);font-size:18px">(S0 평균 AT, 분)</span></div>
+            <div class="fbar-row"><span class="fl">유연도 0.0</span><div class="fbar-wrap"><div class="fbar" style="width:90%">145</div></div></div>
+            <div class="fbar-row"><span class="fl">유연도 0.5</span><div class="fbar-wrap"><div class="fbar" style="width:26%">41</div></div></div>
+            <div class="fbar-row"><span class="fl">유연도 1.0</span><div class="fbar-wrap"><div class="fbar" style="width:18%">28</div></div></div>
+            <p class="cap">대체 기계 선택지로 유연도 0→1 시 <b>AT 65~81% 감소</b>. 0.5가 최적 구간.</p>
+          </div>
         </div>
       </div>
 
