@@ -177,33 +177,7 @@
               <li><b>문헌</b> : WMDD · COVERT · ATC · LPT · MWKR · LWKR · MDD</li>
             </ul>
           </div>
-        </div>
-      </div>
 
-      <div class="sec vis">
-        <div class="hd"><span class="no" style="color:var(--accent)">★</span> 한눈에 보기</div>
-        <div class="bd">
-          <div class="subhd">진화 파이프라인</div>
-          <div class="pipe">
-            <div class="pbox">초기 집단<small>B1~B5 + LLM 5</small></div>
-            <div class="parrow">→</div>
-            <div class="pbox">평가·선택·생성<small>4연산자 · 20세대</small></div>
-            <div class="parrow">→</div>
-            <div class="pbox">최적 규칙</div>
-          </div>
-          <div class="subhd" style="margin-top:10px">유연도가 AT를 좌우 <span style="font-weight:500;color:var(--muted);font-size:18px">(S0 평균, 분)</span></div>
-          <div class="fbar-row"><span class="fl">유연도 0.0</span><div class="fbar-wrap"><div class="fbar" style="width:90%">145</div></div></div>
-          <div class="fbar-row"><span class="fl">유연도 0.5</span><div class="fbar-wrap"><div class="fbar" style="width:26%">41</div></div></div>
-          <div class="fbar-row"><span class="fl">유연도 1.0</span><div class="fbar-wrap"><div class="fbar" style="width:18%">28</div></div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ════ 2단 : 방법(계속) · 결과 · 결론 ════ -->
-    <div class="col">
-      <div class="sec">
-        <div class="hd" style="font-size:30px">연구 방법 — ③ LLM 진화 · ④ 이벤트 변환</div>
-        <div class="bd">
           <div class="block">
             <div class="subhd">③ LLM 규칙 진화 (EoH)</div>
             <p><b>LLM-A</b>가 상위 규칙에서 새 우선순위 함수를 생성, 시뮬레이션 평가로 약한 규칙 제거.</p>
@@ -223,6 +197,10 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- ════ 2단 : 결과 · 결론 ════ -->
+    <div class="col">
       <div class="sec">
         <div class="hd"><span class="no">4</span> 연구 결과</div>
         <div class="bd">
@@ -260,6 +238,18 @@
           </ul>
         </div>
       </div>
+
+      <div class="sec">
+        <div class="hd" style="font-size:30px">약어 정리 (Glossary)</div>
+        <div class="bd gloss" style="font-size:19px; line-height:1.8">
+          <span class="grp">기준 규칙 (인간 설계)</span> &nbsp;
+          <b>FIFO</b> 선입선출 · <b>EDD</b> 최단납기 · <b>SPT</b> 최단처리시간 · <b>CR</b> 임계율(여유÷잔여) ·
+          <b>Urgency</b> 긴급가중 · <b>WMDD</b> 가중수정납기 · <b>MDD</b> 수정납기 · <b>COVERT</b> 비용기반긴급도 ·
+          <b>ATC</b> 조정납기비용 · <b>LPT</b> 최장처리시간 · <b>MWKR</b> 최다잔여작업 · <b>LWKR</b> 최소잔여작업
+          <br><span class="grp">지표</span> &nbsp;<b>AT</b> 평균납기초과 · <b>MIT</b> 설비유휴시간 · <b>PTJ</b> 납기초과작업비율 · <b>ARI</b> 평균상대개선률
+          <br><span class="grp">기타</span> &nbsp;<b>FJSSP</b> 유연 잡샵 스케줄링 · <b>EoH</b> 휴리스틱 진화 · <b>P1/P2/P3</b> 충격변수·경험저장 변형법
+        </div>
+      </div>
     </div>
   </div>
 
@@ -270,17 +260,6 @@
       <code>S1 부품지연 : exp(−0.125 × max(0, 납기−(현재+남은작업+<b style="color:#ffd479">부품가용시각</b>))) ÷ 남은작업</code><br>
       <code>S2 긴급주문 : exp(−납기여유 × (<b style="color:#ffd479">긴급</b>이면 0.5)) ÷ (남은작업 + 1)</code><br>
       <span class="x">→ 공통 뼈대 <b style="color:#fff">지수형 납기 ÷ 잔여 처리시간</b>(WMDD·ATC·CR에서 유래) 위에, S1은 <b style="color:#fff">부품 가용 시각</b>, S2는 <b style="color:#fff">긴급 플래그</b>를 결합한다. 시나리오마다 핵심 변수가 다르다. <i>(세대별 과정은 부록)</i></span>
-    </div>
-    <div class="bcard">
-      <div class="hd">약어 정리 (Glossary)</div>
-      <div class="bd gloss">
-        <span class="grp">기준 규칙 (인간 설계)</span> &nbsp;
-        <b>FIFO</b> 선입선출 · <b>EDD</b> 최단납기 · <b>SPT</b> 최단처리시간 · <b>CR</b> 임계율(여유÷잔여) ·
-        <b>Urgency</b> 긴급가중 · <b>WMDD</b> 가중수정납기 · <b>MDD</b> 수정납기 · <b>COVERT</b> 비용기반긴급도 ·
-        <b>ATC</b> 조정납기비용 · <b>LPT</b> 최장처리시간 · <b>MWKR</b> 최다잔여작업 · <b>LWKR</b> 최소잔여작업
-        <br><span class="grp">지표</span> &nbsp;<b>AT</b> 평균납기초과 · <b>MIT</b> 설비유휴시간 · <b>PTJ</b> 납기초과작업비율 · <b>ARI</b> 평균상대개선률
-        &nbsp; <span class="grp">기타</span> &nbsp;<b>FJSSP</b> 유연 잡샵 스케줄링 · <b>EoH</b> 휴리스틱 진화 · <b>P1/P2/P3</b> 충격변수·경험저장 변형법
-      </div>
     </div>
   </div>
 
