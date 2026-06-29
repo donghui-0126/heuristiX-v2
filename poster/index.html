@@ -25,7 +25,7 @@
   header .auth{ font-size:36px; opacity:.85; margin-top:8px; }
 
   /* 본문 2단 */
-  .body{ display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:14px 16px 8px; background:#f6f8fc; }
+  .body{ display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:10px 14px 6px; background:#f6f8fc; }
 
   /* 하단 전폭 띠 : 진화 규칙 + 약어 */
   .band{ padding:0 16px 12px; background:#f6f8fc; }
@@ -49,7 +49,7 @@
   .gloss{ font-size:19px; line-height:1.65; color:#2c333f; }
   .gloss .grp{ font-weight:700; color:var(--accent); }
   .gloss b{ color:var(--navy); }
-  .col{ display:flex; flex-direction:column; gap:11px; min-height:0; }
+  .col{ display:flex; flex-direction:column; gap:9px; min-height:0; }
 
   /* 섹션 카드 */
   .sec{ background:#fff; border:1px solid var(--line); border-radius:7px; overflow:hidden; }
@@ -58,7 +58,7 @@
   .sec > .hd .no{ background:#fff; color:var(--navy); border-radius:50%; width:50px; height:50px;
                   display:inline-flex; align-items:center; justify-content:center; font-size:26px; font-weight:800; }
   .sec .bd{ padding:13px 18px; font-size:24px; line-height:1.6; color:#2c333f; }
-  .sec .bd p{ margin-bottom:9px; }
+  .sec .bd p{ margin-bottom:7px; }
   .sec .bd p:last-child{ margin-bottom:0; }
   .sec .bd b{ color:var(--navy); }
 
@@ -82,8 +82,8 @@
   .neg{ color:#b03030; }
   .cap{ font-size:18px; color:var(--muted); margin-top:5px; line-height:1.45; }
 
-  .stat{ display:flex; gap:14px; margin-bottom:12px; }
-  .stat .s{ flex:1; background:var(--navy); color:#fff; border-radius:7px; padding:14px 10px; text-align:center; }
+  .stat{ display:flex; gap:14px; margin-bottom:9px; }
+  .stat .s{ flex:1; background:var(--navy); color:#fff; border-radius:7px; padding:11px 10px; text-align:center; }
   .stat .s .v{ font-size:54px; font-weight:800; line-height:1; }
   .stat .s .k{ font-size:22px; opacity:.9; margin-top:7px; line-height:1.3; }
 
@@ -91,6 +91,19 @@
   .barrow{ display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:6px; }
   .barrow .lab{ width:62px; color:var(--muted); }
   .barrow .val{ width:40px; text-align:right; color:var(--navy); font-weight:700; }
+
+  /* 시각 요소 : 파이프라인 + 막대그래프 */
+  .pipe{ display:flex; align-items:center; gap:8px; margin:8px 0 2px; }
+  .pbox{ flex:1; background:var(--light); border:1px solid var(--line); border-radius:9px;
+         padding:8px 6px; text-align:center; font-size:19px; font-weight:700; color:var(--navy); line-height:1.25; }
+  .pbox small{ display:block; font-size:14px; font-weight:500; color:var(--muted); margin-top:3px; }
+  .parrow{ color:var(--accent); font-weight:800; font-size:26px; }
+  .fbar-row{ display:flex; align-items:center; gap:12px; font-size:20px; margin-bottom:6px; }
+  .fbar-row .fl{ width:112px; color:var(--muted); }
+  .fbar-wrap{ flex:1; }
+  .fbar{ height:25px; background:var(--accent); border-radius:5px; display:flex; align-items:center;
+         justify-content:flex-end; padding-right:12px; color:#fff; font-weight:800; font-size:20px; }
+  .vis .hd{ background:var(--accent) !important; }
 
   .concl{ background:var(--navy); color:#fff; }
   .concl .hd{ background:#1f2a4d; }
@@ -120,12 +133,11 @@
       <div class="sec">
         <div class="hd"><span class="no">1</span> 연구 배경</div>
         <div class="bd">
-          <p>2026년 호르무즈 해협 통항 제한 등 <b>공급망 충격</b>은 부품 입고 지연으로 이어져 <b>설비 유휴 · 납기 초과</b>를 유발한다.</p>
           <div class="twobox">
             <div class="box"><div class="t">공급망 충격</div>
-              <div class="d">부품 지연 / 긴급 주문 → 납기 초과 → 고객 신뢰·생산 차질</div></div>
+              <div class="d">부품 지연·긴급 주문 → 납기 초과</div></div>
             <div class="box"><div class="t">기존 규칙 한계</div>
-              <div class="d">FIFO·EDD·SPT·CR 등 고정 규칙은 가중치가 고정 → 교란 변화에 동적 대응 곤란</div></div>
+              <div class="d">고정 규칙은 가중치 고정 → 교란 변화에 동적 대응 곤란</div></div>
           </div>
           <p style="margin-top:9px"><b>FJSSP</b>는 한 공정을 여러 기계가 처리 가능 → 지연 작업을 <b>대체 기계</b>로 우회할 여지가 있다.</p>
         </div>
@@ -167,12 +179,30 @@
           </div>
         </div>
       </div>
+
+      <div class="sec vis">
+        <div class="hd"><span class="no" style="color:var(--accent)">★</span> 한눈에 보기</div>
+        <div class="bd">
+          <div class="subhd">진화 파이프라인</div>
+          <div class="pipe">
+            <div class="pbox">초기 집단<small>B1~B5 + LLM 5</small></div>
+            <div class="parrow">→</div>
+            <div class="pbox">평가·선택·생성<small>4연산자 · 20세대</small></div>
+            <div class="parrow">→</div>
+            <div class="pbox">최적 규칙</div>
+          </div>
+          <div class="subhd" style="margin-top:10px">유연도가 AT를 좌우 <span style="font-weight:500;color:var(--muted);font-size:18px">(S0 평균, 분)</span></div>
+          <div class="fbar-row"><span class="fl">유연도 0.0</span><div class="fbar-wrap"><div class="fbar" style="width:90%">145</div></div></div>
+          <div class="fbar-row"><span class="fl">유연도 0.5</span><div class="fbar-wrap"><div class="fbar" style="width:26%">41</div></div></div>
+          <div class="fbar-row"><span class="fl">유연도 1.0</span><div class="fbar-wrap"><div class="fbar" style="width:18%">28</div></div></div>
+        </div>
+      </div>
     </div>
 
     <!-- ════ 2단 : 방법(계속) · 결과 · 결론 ════ -->
     <div class="col">
       <div class="sec">
-        <div class="hd"><span class="no">3</span> 연구 방법 (계속)</div>
+        <div class="hd" style="font-size:30px">연구 방법 — ③ LLM 진화 · ④ 이벤트 변환</div>
         <div class="bd">
           <div class="block">
             <div class="subhd">③ LLM 규칙 진화 (EoH)</div>
