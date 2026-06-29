@@ -11,7 +11,7 @@
   @page{ size:594mm 841mm; margin:0; }
   body{ font-family:"Pretendard Variable",Pretendard,sans-serif; background:#fff; color:#222;
         -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-  .poster{ width:1280px; margin:0 auto; background:#fff; display:flex; flex-direction:column; }
+  .poster{ width:1280px; margin:0 auto; background:#fff; display:flex; flex-direction:column; word-break:keep-all; }
   header{ background:linear-gradient(135deg,var(--navy),var(--navy2)); color:#fff; padding:26px 50px; text-align:center; }
   header h1{ font-size:32px; font-weight:800; letter-spacing:-.3px; }
   header .sub{ font-size:16px; opacity:.92; margin-top:8px; }
@@ -86,7 +86,7 @@
               · <b>변형</b> 구조 일부 변경 · <b>교차</b> 두 규칙 장점 결합 · <b>반성</b> 성능 원인 분석 후 수정 · <b>단순화</b> 군더더기 제거</span></div>
             <div class="step"><span class="n">4</span><span class="tx"><b>제거</b> — 실행 불가·저성능 규칙 폐기, 상위 7 + 신규 8 = 15개로 다음 세대</span></div>
           </div>
-          <div class="loopback">↺ 20세대 반복 → 최적 규칙 도출</div>
+          <div class="loopback">» 20세대 반복 → 최적 규칙 도출</div>
 
           <p style="margin-top:14px;font-weight:700;color:var(--navy)">세대가 진행되며 best AT가 낮아진다 (S1·유연도 0.5 예시)</p>
           <div class="traj">
@@ -107,7 +107,7 @@
             <tr><th>진화 규칙 구성요소</th><th>출처</th></tr>
             <tr><td><b>exp(−납기여유)</b> 지수형 납기 가중</td><td class="c">WMDD · ATC</td></tr>
             <tr><td><b>÷ 남은작업(remaining_pt)</b> 분모</td><td class="c">CR (임계율)</td></tr>
-            <tr><td><b>−부품가용시각</b> 을 납기여유에 삽입</td><td class="c">🆕 외부 충격 변수<br>(인간 규칙엔 없음)</td></tr>
+            <tr><td><b>−부품가용시각</b> 을 납기여유에 삽입</td><td class="c">[신규] 외부 충격 변수<br>(인간 규칙엔 없음)</td></tr>
           </table>
           <p class="cap">→ LLM은 <b>기존 규칙들의 장점을 조합·변형</b>하고, 고정 규칙엔 없던 <b>부품 가용 시각</b>을
             끼워 넣어 부품 지연 작업의 납기 위험을 직접 반영하는 새 규칙을 만들었다.</p>
