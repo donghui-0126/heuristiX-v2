@@ -92,6 +92,14 @@
   .barrow .lab{ width:62px; color:var(--muted); }
   .barrow .val{ width:40px; text-align:right; color:var(--navy); font-weight:700; }
 
+  /* 입력→출력 예시 박스 */
+  .ex{ background:var(--light); border:1px solid var(--line); border-radius:8px; padding:9px 12px; margin-top:7px; font-size:20px; line-height:1.5; }
+  .ex .tag2{ display:inline-block; color:#fff; font-size:16px; font-weight:700; border-radius:5px; padding:1px 9px; margin-right:6px; }
+  .ex .ti{ background:var(--accent); }
+  .ex .to{ background:#1a7a3a; }
+  .ex small{ color:var(--muted); font-size:16px; }
+  .ex .ar{ color:var(--accent); font-weight:800; }
+
   /* 시각 요소 : 파이프라인 + 막대그래프 */
   .pipe{ display:flex; align-items:center; gap:8px; margin:8px 0 2px; }
   .pbox{ flex:1; background:var(--light); border:1px solid var(--line); border-radius:9px;
@@ -189,18 +197,25 @@
               <tr><th>진화 반복</th><th>집단</th><th>평가 환경</th><th>최종 평가</th></tr>
               <tr><td>20 세대</td><td>15</td><td>5</td><td>100 회</td></tr>
             </table>
-            <p class="cap">시뮬레이터 = <b>Rust</b> 이산사건 · LLM = <b>GPT-4o-mini</b> · 지표 = <b>AT</b>(핵심), MIT·PTJ·개선률(ARI)</p>
-          </div>
-          <div class="block">
-            <div class="subhd">④ 현실 이벤트 변환</div>
-            <p><b>자연어 공급망 사건</b>(예: "항만 파업 3일 지연")을 LLM이 S1·S2 파라미터(JSON)로 자동 변환한다.</p>
+            <p class="cap">시뮬레이터 = <b>Rust</b> · LLM = <b>GPT-4o-mini</b> · 지표 = AT·MIT·PTJ·개선률</p>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ════ 2단 : 결과 · 결론 ════ -->
+    <!-- ════ 2단 : 이벤트변환 · 결과 · 결론 · 약어 ════ -->
     <div class="col">
+      <div class="sec">
+        <div class="hd" style="font-size:30px">현실 이벤트 → 시뮬레이션 변환</div>
+        <div class="bd">
+          <p>현장 담당자가 <b>겪은 사건을 문장으로 입력</b>하면, LLM이 강도·범위를 해석해 시뮬레이션
+             <b>S1·S2 파라미터로 자동 변환</b> → 실제 충격을 곧바로 실험으로 재현한다.</p>
+          <div class="ex">
+            <div><span class="tag2 ti">입력</span> "부산항 폐쇄로 반도체 부품 입고 <b>7일</b> 지연, <b>심각</b>"</div>
+            <div style="margin-top:5px"><span class="tag2 to">출력</span> <b>S1 부품지연</b> · 영향비율 0.8 · 지연배수 4.0 <small>(+ 설정 근거 · 영향 요약)</small></div>
+          </div>
+        </div>
+      </div>
       <div class="sec">
         <div class="hd"><span class="no">4</span> 연구 결과</div>
         <div class="bd">
