@@ -94,7 +94,7 @@
             <div class="trow"><span class="g">중반 세대</span><div class="bar" style="width:285px"></div><span class="v">54.1</span></div>
             <div class="trow"><span class="g">후반 세대</span><div class="bar" style="width:271px"></div><span class="v">51.4</span></div>
           </div>
-          <p class="cap">최강 인간 규칙 WMDD(56.9)에서 출발해, 진화를 거쳐 <b>AT 51.4 (ARI +9.7%)</b>의 LLM 규칙으로 발전했다.
+          <p class="cap">최강 인간 규칙 WMDD(56.9)에서 출발해, 진화를 거쳐 <b>AT 51.4 (개선률 +9.7%)</b>의 LLM 규칙으로 발전했다.
             (값은 100회 평균 AT)</p>
         </div>
       </div>
@@ -121,21 +121,21 @@
         <div class="hd"><span class="no">B</span> 유연도가 커질수록 규칙이 이렇게 발전 (S1 · 부품 지연)</div>
         <div class="bd">
           <div class="rule">
-            <div class="rh"><span>유연도 0.0 — AT 159.9</span><span class="ari">ARI +0.1% vs SPT</span></div>
+            <div class="rh"><span>유연도 0.0 — AT 159.9</span><span class="ari">개선률 +0.1% vs SPT</span></div>
             <div class="code">urgent_order_flag × (납기 − 현재 + 1) ÷ (남은작업 + 1)
   − 처리시간 ÷ max(1, 기계가용시각 − 현재)  − 처리시간</div>
             <div class="desc"><b>단순한 SPT형</b> — 처리시간을 강하게 반영하고 긴급 작업에 약간 가중. 대체 기계가 없어
               "짧은 작업 먼저"가 지배적.</div>
           </div>
           <div class="rule">
-            <div class="rh"><span>유연도 0.5 — AT 51.4</span><span class="ari">ARI +9.7% vs WMDD ★</span></div>
+            <div class="rh"><span>유연도 0.5 — AT 51.4</span><span class="ari">개선률 +9.7% vs WMDD ★</span></div>
             <div class="code">exp(−0.125 × max(0, 납기 − (현재 + 남은작업 + 부품가용시각)))
   ÷ 남은작업</div>
             <div class="desc"><b>정교한 납기·부품 결합형</b> — 지수형 납기 여유에 <b>부품 가용 시각</b>을 더해 부품 지연
               위험을 세밀하게 반영. 본 연구 최고 성과.</div>
           </div>
           <div class="rule">
-            <div class="rh"><span>유연도 1.0 — AT 42.8</span><span class="ari">ARI +5.2% vs CR</span></div>
+            <div class="rh"><span>유연도 1.0 — AT 42.8</span><span class="ari">개선률 +5.2% vs CR</span></div>
             <div class="code">exp(−max(0, 납기 − 현재 − 0.87 × 남은작업))
   + (긴급이면) × 1000</div>
             <div class="desc"><b>지수형 납기 + 긴급 분기형</b> — 대체 기계가 충분해 납기 위험 중심으로 단순화하되,
