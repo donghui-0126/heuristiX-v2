@@ -15,7 +15,7 @@
   body{ font-family:"Pretendard Variable",Pretendard,sans-serif; background:#fff; color:var(--ink);
         -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   /* A1 세로 비율(0.707) — 폭 1200px, 높이 1200×√2 = 1697px */
-  .poster{ width:1280px; margin:0 auto; background:#fff; display:flex; flex-direction:column; word-break:keep-all; }
+  .poster{ width:1320px; margin:0 auto; background:#fff; display:flex; flex-direction:column; word-break:keep-all; }
 
   /* 헤더 밴드 */
   header{ background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%); color:#fff;
@@ -203,21 +203,21 @@
         <div class="bd">
           <div class="stat">
             <div class="s"><div class="v">+9.7%</div><div class="k">최강 인간 규칙 대비<br>최대 AT 감소 (S1·flex 0.5)</div></div>
-            <div class="s"><div class="v">3 / 3</div><div class="k">유연도 0.5 환경에서<br>최강 규칙 추월·동률</div></div>
+            <div class="s"><div class="v">3 / 3</div><div class="k">유연도 0.5 환경에서<br>최강 기준 규칙 상회·동등</div></div>
           </div>
 
           <div class="block">
-            <div class="subhd">▸ 우리 규칙이 각 환경의 <b>최강 인간 규칙</b>을 이겼다 (유연도 0.5)</div>
+            <div class="subhd">▸ 제안 규칙 대 최강 기준 규칙 (유연도 0.5)</div>
             <table>
-              <tr><th>실험</th><th>최강 인간규칙</th><th>우리 규칙</th><th>개선</th></tr>
+              <tr><th>시나리오</th><th>최강 기준 규칙</th><th>제안 규칙</th><th>ARI</th></tr>
               <tr><td class="l">S0 정상</td><td>WMDD&nbsp;41.4</td><td class="c">37.6</td><td class="pos">+9.4%</td></tr>
               <tr><td class="l">S1 부품지연</td><td>WMDD&nbsp;56.9</td><td class="c">51.4</td><td class="pos">+9.7%</td></tr>
               <tr><td class="l">S2 긴급주문</td><td>MDD&nbsp;77.7</td><td class="c">77.6</td><td>±0%</td></tr>
             </table>
-            <p class="cap"><b>우리 최고 규칙이 새로 찾아낸 것 (노벨티)</b><br>
-              · <b>S1</b> : 인간 규칙엔 없던 <b>부품 가용 시각</b>을 납기 여유 계산에 삽입 → 부품 지연 작업의 위험을 직접 식별<br>
-              · <b>S0</b> : 지수형 납기 가중에 <b>긴급도를 곱셈으로 결합</b>하고 잔여작업으로 정규화<br>
-              · <b>S2</b> : 단일 긴급 주문은 MDD가 이미 최적이라 추가 여지 작음 <i>(정직한 한계)</i></p>
+            <p class="cap"><b>제안 규칙의 신규성 (Novelty)</b><br>
+              · <b>S1</b> : 기준 규칙에 없는 <b>부품 가용 시각</b>을 납기 여유 항에 결합 → 부품 지연 작업의 위험을 식별<br>
+              · <b>S0</b> : 지수형 납기 가중에 <b>긴급도를 곱 연산으로 결합</b>, 잔여 처리시간으로 정규화<br>
+              · <b>S2</b> : 단일 긴급 주문에서는 MDD가 이미 최적에 근접하여 개선 여지가 제한적</p>
           </div>
 
           <div class="block">
@@ -251,9 +251,10 @@
   <!-- ════ 하단 전폭 : 진화 규칙 한 줄 + 약어 ════ -->
   <div class="band">
     <div class="evoline">
-      <span class="t">우리가 진화시킨 규칙 (S1·유연도 0.5, ARI +9.7%) :</span>
-      <code> exp(−0.125 × max(0, 납기−(현재+남은작업+부품가용시각))) ÷ 남은작업</code><br>
-      <span class="x">→ 인간 규칙 <b style="color:#fff">WMDD·ATC</b>의 지수형 납기 가중 + <b style="color:#fff">CR</b>의 잔여작업 분모를 <b style="color:#fff">조합·변형</b>하고, 고정 규칙엔 없던 <b style="color:#fff">부품 가용 시각</b>(외부 충격 변수)을 추가. <i>(세대별 발전 과정은 부록 참조)</i></span>
+      <span class="t">LLM 진화 규칙 — 같은 뼈대, 다른 충격 변수 (유연도 0.5)</span><br>
+      <code>S1 부품지연 : exp(−0.125 × max(0, 납기−(현재+남은작업+<b style="color:#ffd479">부품가용시각</b>))) ÷ 남은작업</code><br>
+      <code>S2 긴급주문 : exp(−납기여유 × (<b style="color:#ffd479">긴급</b>이면 0.5)) ÷ (남은작업 + 1)</code><br>
+      <span class="x">→ 공통 뼈대 <b style="color:#fff">지수형 납기 ÷ 잔여 처리시간</b>(WMDD·ATC·CR에서 유래) 위에, S1은 <b style="color:#fff">부품 가용 시각</b>, S2는 <b style="color:#fff">긴급 플래그</b>를 결합한다. 시나리오마다 핵심 변수가 다르다. <i>(세대별 과정은 부록)</i></span>
     </div>
     <div class="bcard">
       <div class="hd">약어 정리 (Glossary)</div>
