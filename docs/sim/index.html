@@ -136,9 +136,8 @@
 
   <div class="tree">
     <div class="thd">
-      <div class="ttitle">🧬 이 LLM 규칙은 어떻게 진화했나 — 세대 트리 <span class="mini">(개념 예시)</span></div>
-      <div class="tsub">사람 규칙 수준(AT ≈ <span id="tStart">—</span>)의 초기 집단에서 출발해, 세대마다 연산자로 규칙을 변형·평가하며
-        <b>최고 성능 계보</b>(초록)를 따라 AT ≈ <span id="tEnd">—</span> 까지 낮춥니다. 각 상자의 숫자는 그 규칙의 AT입니다.</div>
+      <div class="ttitle">🧬 세대별 진화 곡선 — 전체 20세대 <span class="mini">(실제 실험 데이터)</span></div>
+      <div class="tsub" id="gsub">세대가 진행되며 best 규칙의 평균 지연(AT)이 낮아집니다. 실제 진화 실험(12작업·6기계·100회 평균) 곡선입니다.</div>
     </div>
     <canvas id="cvT"></canvas>
     <div class="tlegend" id="tlegend"></div>
@@ -260,69 +259,50 @@ function drawGantt(cv, res, tCursor){
 }
 function rr(g,x,y,w,h,r){ r=Math.min(r,w/2,h/2); g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
 
-// ===== 진화 세대 트리 =====
-const OPS_T = {
-  seed:{n:'초기 규칙', c:'#6b7689'},
-  E1:{n:'변형', c:'#58a6ff'},
-  E2:{n:'교차', c:'#a371f7'},
-  M1:{n:'반성', c:'#f0883e'},
-  M2:{n:'단순화', c:'#2dd4bf'},
-};
-function buildTree(startAT, endAT){
-  const rnd=mulberry32(Math.round(startAT*100)+Math.round(endAT*10)+7);
-  const perGen=[4,3,3,3,2], NG=perGen.length, opsK=['E1','E2','M1','M2'];
-  const gens=[];
-  for(let g=0; g<NG; g++){
-    const n=perGen[g], nodes=[];
-    const bestAT = startAT + (endAT-startAT)*(g/(NG-1));
-    for(let k=0;k<n;k++){
-      const isBest = k===0;
-      const op = g===0 ? 'seed' : opsK[Math.floor(rnd()*opsK.length)];
-      const at = isBest ? bestAT : bestAT + (0.2+rnd()*0.9)*Math.max(2, startAT*0.4);
-      let parent;
-      if(g===0) parent=-1;
-      else if(isBest) parent = (op==='E2' && gens[g-1].length>1) ? 1 : 0; // 교차면 다른 계보와 결합
-      else parent = Math.floor(rnd()*gens[g-1].length);
-      nodes.push({at, op, parent, best:isBest});
-    }
-    gens.push(nodes);
-  }
-  return {gens};
-}
-function drawTree(cv, tree, reveal){
-  const dpr=window.devicePixelRatio||1, W=cv.clientWidth, NG=tree.gens.length, colW=W/NG;
-  const maxRows=Math.max(...tree.gens.map(g=>g.length)), rowH=50, padT=24, padB=8;
-  const H=padT+maxRows*rowH+padB;
+// ===== 세대별 진화 곡선 (전체 20세대, 실측 데이터) =====
+// 각 셀의 세대별 best AT (12작업·6기계·100회 평균). meta: 사용 변형·개선률·수렴세대
+const GEN_CURVE={"S2_0":[192.47,192.47,192.47,187.58,187.54,185.03,184.72,184.29,183.23,183.23,183.23,183.23,183.23,183.23,183.23,183.23,183.23,183.23,183.23,183.23],"S0_1":[28.47,28.4,28.4,28.4,28.4,28.4,28.4,28.4,28.14,28.14,28.14,28.04,27.6,27.6,27.6,27.6,27.6,27.6,27.6,27.6],"S1_0":[160.13,160.13,159.69,159.69,159.69,159.69,159.69,159.69,159.69,158.4,158.01,158.01,158.01,158.01,158.01,158.01,158.01,158.01,158.01,158.01],"S1_1":[44.96,43.1,43.1,43.1,43.1,42.83,42.83,42.83,42.81,42.56,42.29,42.29,42.29,42.29,42.29,42.29,42.29,42.29,42.29,42.29],"S0_0.5":[41.91,41.15,41.03,41.03,37.91,37.91,37.91,37.91,37.77,37.77,37.71,37.71,37.61,37.61,37.55,37.55,37.55,37.55,37.55,37.55],"S2_1":[63.9,63.9,63.84,63.84,63.81,63.81,63.81,63.42,63.42,63.4,63.4,63.4,63.4,63.4,63.4,63.38,63.38,63.38,63.38,63.36],"S2_0.5":[78.02,76.98,76.98,76.98,76.98,76.98,76.98,76.98,76.98,76.98,76.98,76.98,76.98,76.98,76.98,76.98,76.98,76.98,76.98,76.98],"S0_0":[145.07,145.07,141.44,138.12,138.12,137.39,137.3,137.3,137.3,137.3,137.3,137.3,137.3,137.3,137.3,137.3,137.3,137.3,137.3,137.3],"S1_0.5":[57.27,57.27,53.07,52.91,52.62,51.86,51.86,51.86,51.72,51.72,51.72,51.72,51.72,51.72,51.72,51.72,51.72,51.72,51.72,51.72]};
+const GEN_META={"S2_0":{variant:"P2",imp:4.8,converge:9},"S0_1":{variant:"P3",imp:3.0,converge:13},"S1_0":{variant:"P1",imp:1.3,converge:11},"S1_1":{variant:"P3",imp:5.9,converge:11},"S0_0.5":{variant:"P2",imp:10.4,converge:15},"S2_1":{variant:"P2",imp:0.9,converge:20},"S2_0.5":{variant:"P1",imp:1.3,converge:2},"S0_0":{variant:"P1",imp:5.4,converge:7},"S1_0.5":{variant:"P1",imp:9.7,converge:9}};
+function drawConv(cv, curve, meta, reveal){
+  const dpr=window.devicePixelRatio||1, W=cv.clientWidth, H=250, padL=52, padR=54, padT=18, padB=34;
   cv.width=W*dpr; cv.height=H*dpr; cv.style.height=H+'px';
   const g=cv.getContext('2d'); g.scale(dpr,dpr); g.clearRect(0,0,W,H);
-  const nodeW=Math.min(colW-20, 88), nodeH=32;
-  const pos=(gi,ni)=>({ x: colW*gi+colW/2, y: padT+ni*rowH+nodeH/2 });
-  const glabels=['초기 집단','1세대','2세대','3세대','최종'];
-  g.font='11px Pretendard'; g.textAlign='center'; g.textBaseline='alphabetic';
-  for(let gi=0; gi<NG; gi++){ if(gi<=reveal){ g.fillStyle='#6b7689'; g.fillText(glabels[gi]||('G'+gi), colW*gi+colW/2, 14); } }
-  // edges
-  tree.gens.forEach((nodes,gi)=>{ if(gi===0||gi>reveal) return;
-    nodes.forEach((nd,k)=>{ const p=pos(gi,k); const par=pos(gi-1,nd.parent);
-      const bestEdge = nd.best && tree.gens[gi-1][nd.parent] && tree.gens[gi-1][nd.parent].best;
-      g.strokeStyle=bestEdge?'#3fb950':'#2b3344'; g.lineWidth=bestEdge?2.5:1; g.globalAlpha=bestEdge?1:.55;
-      const x0=par.x+nodeW/2, x1=p.x-nodeW/2, mx=(x0+x1)/2;
-      g.beginPath(); g.moveTo(x0,par.y); g.bezierCurveTo(mx,par.y,mx,p.y,x1,p.y); g.stroke(); g.globalAlpha=1; });
-  });
-  // nodes
-  g.textBaseline='middle';
-  tree.gens.forEach((nodes,gi)=>{ if(gi>reveal) return;
-    nodes.forEach((nd,k)=>{ const p=pos(gi,k), c=OPS_T[nd.op].c, x=p.x-nodeW/2, y=p.y-nodeH/2;
-      g.fillStyle=nd.best?'#12351f':'#12151d'; rr(g,x,y,nodeW,nodeH,7); g.fill();
-      g.strokeStyle=nd.best?'#3fb950':c; g.lineWidth=nd.best?2:1.3; rr(g,x,y,nodeW,nodeH,7); g.stroke();
-      g.fillStyle=c; g.beginPath(); g.arc(x+10,p.y,3.5,0,7); g.fill();
-      g.fillStyle=nd.best?'#3fb950':'#c9d4e3'; g.font=(nd.best?'bold ':'')+'13px Pretendard'; g.textAlign='left';
-      g.fillText(nd.at.toFixed(1), x+18, p.y); });
-  });
+  const N=curve.length, iw=W-padL-padR, ih=H-padT-padB;
+  const lo=Math.min(...curve), hi=Math.max(...curve), pad=Math.max((hi-lo)*0.12,0.2);
+  const yLo=lo-pad, yHi=hi+pad;
+  const x=i=>padL+iw*(i/(N-1)), y=v=>padT+ih*(1-(v-yLo)/(yHi-yLo));
+  // y 격자 + AT 라벨
+  g.font='11px Pretendard'; g.textBaseline='middle';
+  for(let s=0;s<=4;s++){ const v=yLo+(yHi-yLo)*s/4, yy=y(v);
+    g.strokeStyle='#1a2330'; g.lineWidth=1; g.beginPath(); g.moveTo(padL,yy); g.lineTo(W-padR,yy); g.stroke();
+    g.fillStyle='#6b7689'; g.textAlign='right'; g.fillText(v.toFixed(1), padL-7, yy); }
+  // x 라벨(세대)
+  g.textAlign='center'; g.textBaseline='top';
+  [1,5,10,15,20].forEach(gn=>{ if(gn<=N){ g.fillStyle='#8b949e'; g.fillText(gn+'세대', x(gn-1), H-padB+8); } });
+  const R=Math.min(reveal,N-1);
+  // 수렴선
+  if(meta.converge<=R+1){ const cx=x(meta.converge-1);
+    g.strokeStyle='#3fb95055'; g.lineWidth=1.5; g.setLineDash([4,4]); g.beginPath(); g.moveTo(cx,padT); g.lineTo(cx,padT+ih); g.stroke(); g.setLineDash([]);
+    g.fillStyle='#3fb950'; g.font='11px Pretendard'; g.textBaseline='alphabetic';
+    const near=meta.converge>=N-2; g.textAlign=near?'right':'center'; g.fillText(meta.converge+'세대 수렴', cx-(near?4:0), padT+11); }
+  // 면적 + 선 (드러난 구간)
+  g.beginPath(); g.moveTo(x(0),y(curve[0])); for(let i=1;i<=R;i++) g.lineTo(x(i),y(curve[i]));
+  const grad=g.createLinearGradient(0,padT,0,padT+ih); grad.addColorStop(0,'#3fb95033'); grad.addColorStop(1,'#3fb95000');
+  g.lineTo(x(R),padT+ih); g.lineTo(x(0),padT+ih); g.closePath(); g.fillStyle=grad; g.fill();
+  g.beginPath(); g.moveTo(x(0),y(curve[0])); for(let i=1;i<=R;i++) g.lineTo(x(i),y(curve[i]));
+  g.strokeStyle='#3fb950'; g.lineWidth=2.5; g.stroke();
+  // 점: 개선 발생 세대는 큰 초록, 정체는 작은 회색
+  for(let i=0;i<=R;i++){ const improved = i>0 && curve[i]<curve[i-1]-1e-9;
+    g.fillStyle=improved?'#3fb950':'#4b5566'; g.beginPath(); g.arc(x(i),y(curve[i]),improved?4:2.3,0,7); g.fill(); }
+  // 시작·현재 값 라벨
+  g.textBaseline='middle'; g.textAlign='left'; g.font='bold 12px Pretendard';
+  g.fillStyle='#8b949e'; g.fillText('시작 '+curve[0].toFixed(1), x(0)+6, y(curve[0])-13);
+  g.fillStyle='#3fb950'; g.fillText('AT '+curve[R].toFixed(2), x(R)+7, y(curve[R]));
 }
-function buildTreeLegend(){ const el=document.getElementById('tlegend'); el.innerHTML='';
-  Object.values(OPS_T).forEach(o=>{ const s=document.createElement('span'); s.innerHTML=`<i style="background:${o.c}"></i> ${o.n}`; el.appendChild(s); });
-  const b=document.createElement('span'); b.innerHTML=`<i style="background:#12351f;border:2px solid #3fb950"></i> 최고 성능 계보`; el.appendChild(b);
-}
+function buildConvLegend(){ const el=document.getElementById('tlegend'); el.innerHTML='';
+  el.innerHTML='<span><i style="background:#3fb950;border-radius:50%"></i> 개선 발생 세대</span>'
+    +'<span><i style="background:#4b5566;border-radius:50%"></i> 정체(변화 없음)</span>'
+    +'<span><i style="background:#3fb950;width:14px;height:0;border-top:2px dashed #3fb950"></i> 수렴 지점</span>'; }
 
 // ===== 완료 효과: 컨페티 + 카운트업 + 글로우 =====
 let confettiRAF=null;
@@ -399,15 +379,16 @@ function run(){
     // 완료 효과: LLM이 이기면 개선률 카운트업 + 컨페티 + 글로우
     if(imp>=2){ const n=document.getElementById('impNum'); if(n) countUp(n, Math.round(imp), 700, '% 감소');
       pulseWin(); burstConfetti(); }
-    // 진화 세대 트리: 사람 규칙 수준 → LLM 규칙까지의 계보
-    const startAT=Math.max(human.AT, llm.AT+1), endAT=llm.AT;
-    document.getElementById('tStart').textContent=startAT.toFixed(1);
-    document.getElementById('tEnd').textContent=endAT.toFixed(1);
-    const tree=buildTree(startAT,endAT); buildTreeLegend();
+    // 세대별 진화 곡선: 현재 시나리오×유연도의 실측 20세대 궤적
+    const key=S.scn+'_'+S.flex, curve=GEN_CURVE[key]||GEN_CURVE['S1_0.5'], meta=GEN_META[key]||GEN_META['S1_0.5'];
+    document.getElementById('gsub').innerHTML=`실제 진화 실험(12작업·6기계·100회 평균, 변형 <b style="color:#e6edf3">${meta.variant}</b>). `
+      +`초기 <b style="color:#e6edf3">${curve[0].toFixed(1)}</b> → 최종 <b>${curve[curve.length-1].toFixed(1)}</b> `
+      +`(<b>${meta.imp}%</b> 개선), <b>${meta.converge}세대</b>에서 사실상 수렴 후 정체.`;
+    buildConvLegend();
     if(treeAnim) clearInterval(treeAnim);
-    if(S.spd>=999){ drawTree(cvT,tree,tree.gens.length-1); }
-    else{ let rg=0; drawTree(cvT,tree,0);
-      treeAnim=setInterval(()=>{ rg++; drawTree(cvT,tree,rg); if(rg>=tree.gens.length-1) clearInterval(treeAnim); }, 420/Math.max(S.spd,0.5)); }
+    if(S.spd>=999){ drawConv(cvT,curve,meta,curve.length-1); }
+    else{ let rg=0; drawConv(cvT,curve,meta,0);
+      treeAnim=setInterval(()=>{ rg++; drawConv(cvT,curve,meta,rg); if(rg>=curve.length-1) clearInterval(treeAnim); }, 110/Math.max(S.spd,0.5)); }
   }
   anim=requestAnimationFrame(frame);
 }
