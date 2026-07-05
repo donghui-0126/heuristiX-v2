@@ -184,6 +184,9 @@
   </ul>
 </nav>
 
+<!-- 모바일 드로어 백드롭 -->
+<div id="sidebar-backdrop"></div>
+
 <!-- ── 메인 콘텐츠 ──────────────────────────────────────── -->
 <main id="main-content">
   <header class="topbar">
@@ -229,10 +232,35 @@
   setTimeout(() => obs.disconnect(), 4000);
 })();
 
-document.getElementById('sidebar-toggle').addEventListener('click', () => {
-  document.getElementById('sidebar').classList.toggle('collapsed');
-  document.getElementById('main-content').classList.toggle('expanded');
-});
+(function setupSidebar() {
+  const sidebar  = document.getElementById('sidebar');
+  const main     = document.getElementById('main-content');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  const mq = window.matchMedia('(max-width: 768px)');
+
+  function closeMobile() {
+    sidebar.classList.remove('mobile-open');
+    backdrop.classList.remove('show');
+  }
+
+  document.getElementById('sidebar-toggle').addEventListener('click', () => {
+    if (mq.matches) {
+      // 모바일: 오프캔버스 드로어 열고닫기
+      const open = sidebar.classList.toggle('mobile-open');
+      backdrop.classList.toggle('show', open);
+    } else {
+      // 데스크톱: 폭 축소/확장
+      sidebar.classList.toggle('collapsed');
+      main.classList.toggle('expanded');
+    }
+  });
+
+  // 백드롭 탭 · 메뉴 선택 · 데스크톱 전환 시 드로어 닫기
+  backdrop.addEventListener('click', closeMobile);
+  sidebar.querySelectorAll('.sidebar-nav a').forEach(a =>
+    a.addEventListener('click', () => { if (mq.matches) closeMobile(); }));
+  mq.addEventListener('change', e => { if (!e.matches) closeMobile(); });
+})();
 setInterval(() => {
   const now = new Date();
   document.getElementById('clock').textContent =
